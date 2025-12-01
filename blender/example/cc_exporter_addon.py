@@ -3,7 +3,7 @@ bl_info = {
     "author": "Gui",
     "version": (0, 1),
     "blender": (5, 0, 0),
-    "location": "Scene Properties > 3D Character Creator Exporter",
+    "location": "Side Panel",
     "description": "Export CC_/CCC_ structured objects into folder tree of GLBs",
     "category": "Import-Export",
 }
