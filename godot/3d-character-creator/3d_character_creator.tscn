@@ -1,0 +1,59 @@
+[gd_scene load_steps=5 format=3 uid="uid://dhl0v14olhdbc"]
+
+[ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_be0c8"]
+sky_material = SubResource("ProceduralSkyMaterial_aki0f")
+
+[sub_resource type="Environment" id="Environment_gcf7q"]
+background_mode = 2
+sky = SubResource("Sky_be0c8")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="3DCharacterCreator" type="Node3D"]
+script = ExtResource("1_wih4m")
+blender_export_path = "res://character_config"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_gcf7q")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22660904, 0.1644308, 1.4310383)
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchor_right = 1.0001321
+anchor_bottom = 1.0003704
+offset_right = -0.15209961
+offset_bottom = -0.23999023
+metadata/_edit_use_anchors_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="Panel" type="Panel" parent="UI/HBoxContainer/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
