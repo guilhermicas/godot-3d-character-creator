@@ -3,18 +3,17 @@ bl_info = {
     "author": "Gui",
     "version": (0, 1),
     "blender": (5, 0, 0),
-    "location": "Scene Properties > 3D Character Creator Exporter", #TODO: put in floating menu instead of scene props
+    "location": "Scene Properties > 3D Character Creator Exporter",
     "description": "Export CC_/CCC_ structured objects into folder tree of GLBs",
     "category": "Import-Export",
 }
 
-# TODO: maybe on export it should auto create a "character_config" root folder
-
 import bpy
 import os
-import uuid # TODO: use this or check if there's any reliable object id from blender we can use
+import uuid
+import shutil
 
-from bpy.props import StringProperty
+from bpy.props import StringProperty, BoolProperty
 from bpy.types import Operator, Panel, AddonPreferences, PropertyGroup
 
 # ---------- Utility functions ----------
@@ -22,6 +21,19 @@ from bpy.types import Operator, Panel, AddonPreferences, PropertyGroup
 def ensure_dir(path):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
+
+
+def ensure_uuid_for_object(obj):
+    """
+    Ensure the given object has a persistent unique id stored in a custom property.
+    Does not overwrite an existing id.
+    """
+    try:
+        if not obj.get("CC_id"):
+            obj["CC_id"] = str(uuid.uuid4())
+    except Exception:
+        # be defensive if object doesn't support custom props for some reason
+        pass
 
 def save_selection_state():
     sel = {ob: ob.select_get() for ob in bpy.context.scene.objects}
@@ -180,6 +192,16 @@ class CCExporterProperties(PropertyGroup):
         default="//cc_export",
         subtype='DIR_PATH'
     )
+    add_root_folder: BoolProperty(
+        name="Add folder",
+        description="Add a root 'character_config' folder under the chosen export path",
+        default=True
+    )
+    delete_and_recreate: BoolProperty(
+        name="Delete and recreate",
+        description="Delete everything at the destination and recreate before exporting",
+        default=True
+    )
 
 class CC_OT_export(Operator):
     bl_idname = "cc.export"
@@ -189,7 +211,33 @@ class CC_OT_export(Operator):
     def execute(self, context):
         props = context.scene.cc_exporter_props
         export_base = bpy.path.abspath(props.export_path)
-        ensure_dir(export_base)
+
+        # Determine final target root depending on the 'Add folder' checkbox
+        if props.add_root_folder:
+            target_root = os.path.join(export_base, "character_config")
+        else:
+            target_root = export_base
+
+        # Safety: avoid accidental deletion of extremely short paths
+        abs_target = os.path.abspath(target_root)
+        if props.delete_and_recreate:
+            if len(abs_target) <= 3:
+                self.report({'ERROR'}, f"Refusing to delete unsafe path: {abs_target}")
+                return {'CANCELLED'}
+            if os.path.exists(abs_target):
+                try:
+                    shutil.rmtree(abs_target)
+                except Exception as e:
+                    self.report({'ERROR'}, f"Failed to delete destination: {e}")
+                    return {'CANCELLED'}
+
+        ensure_dir(target_root)
+
+        # assign persistent uuids for CC_/CCC_ objects so ids persist across exports/imports
+        for ob in context.scene.objects:
+            name = (ob.name or "")
+            if name.startswith("CC_") or name.startswith("CCC_"):
+                ensure_uuid_for_object(ob)
 
         # gather top-level objects (objects with no parent)
         top_objects = [o for o in context.scene.objects if o.parent is None]
@@ -198,7 +246,7 @@ class CC_OT_export(Operator):
             self.report({'WARNING'}, "No top-level objects found in scene.")
             return {'CANCELLED'}
 
-        process_collection_of_top_level_objects(export_base, top_objects)
+        process_collection_of_top_level_objects(target_root, top_objects)
         self.report({'INFO'}, "CC export complete.")
         return {'FINISHED'}
 
@@ -215,15 +263,17 @@ class CC_OT_propagate_shape_keys(Operator):
 class CC_PT_exporter_panel(Panel):
     bl_label = "3D Character Creator Exporter"
     bl_idname = "CC_PT_exporter_panel"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'CC Exporter'
 
     def draw(self, context):
         layout = self.layout
         props = context.scene.cc_exporter_props
 
         layout.prop(props, "export_path")
+        layout.prop(props, "add_root_folder")
+        layout.prop(props, "delete_and_recreate")
         row = layout.row()
         row.operator("cc.export", text="Export", icon='EXPORT')
         row.operator("cc.propagate_shape_keys", text="Propagate Shape Keys", icon='SHAPEKEY_DATA')
