@@ -106,7 +106,8 @@ def export_cc_object(obj, export_folder, filepath_name=None):
             filepath=out_path,
             export_format='GLB',
             use_selection=True,
-            export_apply=True
+            export_apply=True,
+            export_extras=True
         )
 
         print(f"[CC Exporter] Exported {obj.name} -> {out_path}")

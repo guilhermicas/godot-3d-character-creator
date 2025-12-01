@@ -1,4 +1,4 @@
 *.blend1
 *__pycache__/
-*.godot/
+.godot/
 /android/

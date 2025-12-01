@@ -30,14 +30,30 @@ func _scan_component(path: String) -> CharacterComponent:
 	comp.name = path.get_file()
 
 	# Find .glb
+	var glb_file := ""
 	dir.list_dir_begin()
 	while true:
 		var f := dir.get_next()
 		if f == "":
 			break
 		if not dir.current_is_dir() and f.ends_with(".glb"):
-			comp.glb_path = path.path_join(f)
+			glb_file = f
 	dir.list_dir_end()
+
+	if glb_file != "":
+		comp.glb_path = path.path_join(glb_file)
+
+		var glb_scene: PackedScene = load(comp.glb_path)
+		if glb_scene:
+			var inst: Node = glb_scene.instantiate()
+
+			# Imported GLB scenes always have the real object under a wrapper:
+			var root: Node = inst.get_child(0)
+
+			if root.has_meta("extras"):
+				var extras = root.get_meta("extras")
+				if extras.has("CC_id"):
+					comp.cc_id = extras["CC_id"]
 
 	# Recurse into CC_/CCC_ folders
 	dir.list_dir_begin()

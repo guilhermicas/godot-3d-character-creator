@@ -1,6 +1,30 @@
-[gd_scene load_steps=5 format=3 uid="uid://dhl0v14olhdbc"]
+[gd_scene load_steps=10 format=3 uid="uid://dhl0v14olhdbc"]
 
 [ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
+[ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="2_aki0f"]
+
+[sub_resource type="Resource" id="Resource_aki0f"]
+script = ExtResource("2_aki0f")
+name = "CC_t_shirt"
+glb_path = "res://character_config/CC_male/CCC_shirts/CC_t_shirt/CC_t_shirt.glb"
+cc_id = "a8852d1f-ec1c-4ebe-a6d2-494a9320031d"
+
+[sub_resource type="Resource" id="Resource_be0c8"]
+script = ExtResource("2_aki0f")
+name = "CCC_shirts"
+children = Array[ExtResource("2_aki0f")]([SubResource("Resource_aki0f")])
+
+[sub_resource type="Resource" id="Resource_gcf7q"]
+script = ExtResource("2_aki0f")
+name = "CC_male"
+glb_path = "res://character_config/CC_male/CC_male.glb"
+cc_id = "1d010f0f-ccdf-4016-90e1-9ba31dec55f9"
+children = Array[ExtResource("2_aki0f")]([SubResource("Resource_be0c8")])
+
+[sub_resource type="Resource" id="Resource_0pyk6"]
+script = ExtResource("2_aki0f")
+name = "character_config"
+children = Array[ExtResource("2_aki0f")]([SubResource("Resource_gcf7q")])
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -18,6 +42,7 @@ glow_enabled = true
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
+root = SubResource("Resource_0pyk6")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")
