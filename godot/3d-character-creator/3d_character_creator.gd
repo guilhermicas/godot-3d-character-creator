@@ -41,19 +41,19 @@ func _scan_component(path: String) -> CharacterComponent:
 	dir.list_dir_end()
 
 	if glb_file != "":
+		# Read CC_id without instancing a PackedScene from .glb
 		comp.glb_path = path.path_join(glb_file)
-
-		var glb_scene: PackedScene = load(comp.glb_path)
-		if glb_scene:
-			var inst: Node = glb_scene.instantiate()
-
-			# Imported GLB scenes always have the real object under a wrapper:
-			var root: Node = inst.get_child(0)
-
-			if root.has_meta("extras"):
-				var extras = root.get_meta("extras")
-				if extras.has("CC_id"):
-					comp.cc_id = extras["CC_id"]
+		
+		var gltf_state := GLTFState.new()
+		
+		var error = GLTFDocument.new().append_from_file(comp.glb_path, gltf_state)
+		if error == OK:
+			var json_data = gltf_state.get_json()
+			if json_data.has("nodes"):
+				for node_data in json_data["nodes"]:
+					if node_data.has("extras") and node_data["extras"].has("CC_id"):
+						comp.cc_id = node_data["extras"]["CC_id"]
+						break  # Found it, stop searching
 
 	# Recurse into CC_/CCC_ folders
 	dir.list_dir_begin()
