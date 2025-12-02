@@ -1,6 +1,7 @@
 @tool
 extends Node3D
 
+## ------------------ Godot's Inspector Logic for Configuration ------------------
 @export_dir var blender_export_path: String:
 	set(value):
 		blender_export_path = value
@@ -19,6 +20,10 @@ func _rebuild_tree():
 	root = _scan_component(blender_export_path)
 	notify_property_list_changed()  # forces inspector refresh
 
+## ------------------ Functions below can be used by users to make their own UI ------------------
+# TODO: document these functions
+# TODO: maybe for a user to use these, we need to set a class_name on top of the file
+#       so this file can be referenced on other files
 
 func _scan_component(path: String) -> CharacterComponent:
 	var dir := DirAccess.open(path)
