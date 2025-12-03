@@ -42,7 +42,7 @@ glow_enabled = true
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
-root = SubResource("Resource_0pyk6")
+character_tree = SubResource("Resource_0pyk6")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")

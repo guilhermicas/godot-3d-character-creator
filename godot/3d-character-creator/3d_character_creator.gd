@@ -7,17 +7,16 @@ extends Node3D
 		blender_export_path = value
 		_rebuild_tree()
 
-@export var root: CharacterComponent
+@export var character_tree: CharacterComponent
 
 func _rebuild_tree():
-	if not Engine.is_editor_hint():
-		return
+	if not Engine.is_editor_hint(): return
 
 	if blender_export_path == "" or not DirAccess.dir_exists_absolute(blender_export_path):
-		root = null
+		character_tree = null
 		return
 
-	root = _scan_component(blender_export_path)
+	character_tree = _scan_component(blender_export_path)
 	notify_property_list_changed()  # forces inspector refresh
 
 ## ------------------ Functions below can be used by users to make their own UI ------------------
@@ -51,8 +50,7 @@ func _scan_component(path: String) -> CharacterComponent:
 		
 		var gltf_state := GLTFState.new()
 		
-		var error = GLTFDocument.new().append_from_file(comp.glb_path, gltf_state)
-		if error == OK:
+		if GLTFDocument.new().append_from_file(comp.glb_path, gltf_state) == OK:
 			var json_data = gltf_state.get_json()
 			if json_data.has("nodes"):
 				for node_data in json_data["nodes"]:
