@@ -1,0 +1,204 @@
+bl_info = {
+    "name": "3D Character Creator Exporter",
+    "author": "Gui",
+    "version": (0, 1),
+    "blender": (5, 0, 0),
+    "location": "Side Panel",
+    "description": "Export CC_/CCC_ structured objects into folder tree of GLBs",
+    "category": "Import-Export",
+}
+
+import bpy
+from pathlib import Path
+import uuid
+from bpy.props import StringProperty, BoolProperty
+from bpy.types import Operator, Panel, PropertyGroup
+
+# ---------- Utility functions ----------
+
+def ensure_uuid(obj):
+    """Ensure object has a persistent UUID in CC_id custom property."""
+    if not obj.get("CC_id"): obj["CC_id"] = str(uuid.uuid4())
+
+def selection_context(objs):
+    """Context manager for safe selection state management."""
+    class SelectionState:
+        def __init__(self, target_objs):
+            self.objs = target_objs
+            self.state = {o: o.select_get() for o in bpy.context.scene.objects}
+            self.active = bpy.context.view_layer.objects.active
+
+        def __enter__(self):
+            for o in bpy.context.scene.objects: o.select_set(False)
+            for o in self.objs: o.select_set(True)
+            if self.objs: bpy.context.view_layer.objects.active = self.objs[0]
+            return self
+
+        def __exit__(self, *args):
+            for o, sel in self.state.items():
+                try: o.select_set(sel)
+                except: pass
+            try: bpy.context.view_layer.objects.active = self.active
+            except: pass
+
+    return SelectionState(objs)
+
+def gather_descendants(root, include_root=True):
+    """Recursively gather root and non-CC_/CCC_ descendants."""
+    result = [root] if include_root else []
+    for child in root.children:
+        if not (child.name.startswith("CC_") or child.name.startswith("CCC_")):
+            result.extend(gather_descendants(child))
+    return result
+
+def make_filename(obj):
+    """Generate filename with format: name_CC_id_uuid.glb"""
+    return f"{obj.name}_CC_id_{obj.get('CC_id', 'unknown')}.glb"
+
+def export_glb(obj, folder):
+    """Export object and descendants as GLB with UUID filename."""
+    objs = gather_descendants(obj)
+    if not objs: return None
+
+    folder.mkdir(parents=True, exist_ok=True)
+    out_path = folder / make_filename(obj)
+
+    with selection_context(objs):
+        bpy.ops.export_scene.gltf(
+            filepath=str(out_path),
+            export_format='GLB',
+            use_selection=True,
+            export_apply=True,
+            export_extras=True
+        )
+
+    print(f"[CC Exporter] Exported {obj.name} -> {out_path}")
+    return out_path
+
+def process_children(parent, folder):
+    """Process children: CC_ objects export, CCC_ objects create subfolders."""
+    for child in parent.children:
+        name = child.name
+        if name.startswith("CC_"):
+            child_folder = folder / name
+            export_glb(child, child_folder)
+            # Process nested CCC_ collections under this CC_
+            for sub in child.children:
+                if sub.name.startswith("CCC_"):
+                    process_children(sub, child_folder / sub.name)
+        elif name.startswith("CCC_"):
+            process_children(child, folder / name)
+
+def process_hierarchy(top_objects, export_root):
+    """Process top-level objects into folder structure."""
+    base = export_root / "root" if len(top_objects) > 1 else export_root
+    base.mkdir(parents=True, exist_ok=True)
+
+    for obj in top_objects:
+        name = obj.name
+        if name.startswith("CC_"):
+            comp_folder = base / name
+            export_glb(obj, comp_folder)
+            process_children(obj, comp_folder)
+        elif name.startswith("CCC_"):
+            process_children(obj, base / name)
+        else:
+            print(f"[CC Exporter] Skipping non-CC_/CCC_ top-level: {name}")
+
+# ---------- Blender UI Components ----------
+
+class CCExporterProperties(PropertyGroup):
+    export_path: StringProperty(
+        name="Export Path",
+        description="Path where the CC glb folders will be created",
+        default="//cc_export",
+        subtype='DIR_PATH'
+    )
+    add_root_folder: BoolProperty(
+        name="Add folder",
+        description="Add a root 'character_config' folder under the chosen export path",
+        default=True
+    )
+    delete_and_recreate: BoolProperty(
+        name="Delete and recreate",
+        description="Delete everything at the destination and recreate before exporting",
+        default=True
+    )
+
+class CC_OT_export(Operator):
+    bl_idname = "cc.export"
+    bl_label = "Export"
+    bl_description = "Export CC_ components into GLB folders"
+
+    def execute(self, context):
+        props = context.scene.cc_exporter_props
+        base = Path(bpy.path.abspath(props.export_path))
+        target = base / "character_config" if props.add_root_folder else base
+
+        # Safety check and cleanup
+        if props.delete_and_recreate:
+            if len(str(target.resolve())) <= 3:
+                self.report({'ERROR'}, f"Refusing to delete unsafe path: {target}")
+                return {'CANCELLED'}
+            if target.exists():
+                try:
+                    from shutil import rmtree
+                    rmtree(target)
+                except Exception as e:
+                    self.report({'ERROR'}, f"Failed to delete destination: {e}")
+                    return {'CANCELLED'}
+
+        # Assign UUIDs to CC_/CCC_ objects
+        for obj in context.scene.objects:
+            if obj.name.startswith(("CC_", "CCC_")):
+                ensure_uuid(obj)
+
+        # Process top-level objects
+        top_objects = [o for o in context.scene.objects if not o.parent]
+        if not top_objects:
+            self.report({'WARNING'}, "No top-level objects found in scene.")
+            return {'CANCELLED'}
+
+        process_hierarchy(top_objects, target)
+        self.report({'INFO'}, "CC export complete.")
+        return {'FINISHED'}
+
+class CC_OT_propagate_shape_keys(Operator):
+    bl_idname = "cc.propagate_shape_keys"
+    bl_label = "Propagate Shape Keys"
+    bl_description = "Placeholder: propagate shape keys (no-op)"
+
+    def execute(self, context):
+        self.report({'INFO'}, "Propagate Shape Keys is a placeholder (no action implemented).")
+        return {'FINISHED'}
+
+class CC_PT_exporter_panel(Panel):
+    bl_label = "3D Character Creator Exporter"
+    bl_idname = "CC_PT_exporter_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'CC Exporter'
+
+    def draw(self, context):
+        layout = self.layout
+        props = context.scene.cc_exporter_props
+        layout.prop(props, "export_path")
+        layout.prop(props, "add_root_folder")
+        layout.prop(props, "delete_and_recreate")
+        row = layout.row()
+        row.operator("cc.export", text="Export", icon='EXPORT')
+        row.operator("cc.propagate_shape_keys", text="Propagate Shape Keys", icon='SHAPEKEY_DATA')
+
+# ---------- Registration ----------
+
+classes = (CCExporterProperties, CC_OT_export, CC_OT_propagate_shape_keys, CC_PT_exporter_panel)
+
+def register():
+    for cls in classes: bpy.utils.register_class(cls)
+    bpy.types.Scene.cc_exporter_props = bpy.props.PointerProperty(type=CCExporterProperties)
+
+def unregister():
+    for cls in reversed(classes): bpy.utils.unregister_class(cls)
+    del bpy.types.Scene.cc_exporter_props
+
+if __name__ == "__main__": register()
