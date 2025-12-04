@@ -1,3 +1,4 @@
+# NOTE: Windows has a max path length of 260 chars, if the tree exceeds this, export will fail. (why Windows, why)
 bl_info = {
     "name": "3D Character Creator Exporter",
     "author": "Gui",
@@ -17,8 +18,8 @@ from bpy.types import Operator, Panel, PropertyGroup
 # ---------- Utility functions ----------
 
 def ensure_uuid(obj):
-    """Ensure object has a persistent UUID in CC_id custom property."""
-    if not obj.get("CC_id"): obj["CC_id"] = str(uuid.uuid4())
+    """Ensure object has a persistent short UUID (8 chars) in CC_id custom property."""
+    if not obj.get("CC_id"): obj["CC_id"] = str(uuid.uuid4())[:8]
 
 def selection_context(objs):
     """Context manager for safe selection state management."""
@@ -51,17 +52,17 @@ def gather_descendants(root, include_root=True):
             result.extend(gather_descendants(child))
     return result
 
-def make_filename(obj):
-    """Generate filename with format: name_CC_id_uuid.glb"""
-    return f"{obj.name}_CC_id_{obj.get('CC_id', 'unknown')}.glb"
+def make_foldername(obj):
+    """Generate folder name with format: name_CC_id_shortuid"""
+    return f"{obj.name}_CC_id_{obj.get('CC_id', 'unknown')}"
 
 def export_glb(obj, folder):
-    """Export object and descendants as GLB with UUID filename."""
+    """Export object and descendants as GLB (filename is just object name)."""
     objs = gather_descendants(obj)
     if not objs: return None
 
     folder.mkdir(parents=True, exist_ok=True)
-    out_path = folder / make_filename(obj)
+    out_path = folder / f"{obj.name}.glb"
 
     with selection_context(objs):
         bpy.ops.export_scene.gltf(
@@ -80,14 +81,14 @@ def process_children(parent, folder):
     for child in parent.children:
         name = child.name
         if name.startswith("CC_"):
-            child_folder = folder / name
+            child_folder = folder / make_foldername(child)
             export_glb(child, child_folder)
             # Process nested CCC_ collections under this CC_
             for sub in child.children:
                 if sub.name.startswith("CCC_"):
-                    process_children(sub, child_folder / sub.name)
+                    process_children(sub, child_folder / make_foldername(sub))
         elif name.startswith("CCC_"):
-            process_children(child, folder / name)
+            process_children(child, folder / make_foldername(child))
 
 def process_hierarchy(top_objects, export_root):
     """Process top-level objects into folder structure."""
@@ -97,11 +98,11 @@ def process_hierarchy(top_objects, export_root):
     for obj in top_objects:
         name = obj.name
         if name.startswith("CC_"):
-            comp_folder = base / name
+            comp_folder = base / make_foldername(obj)
             export_glb(obj, comp_folder)
             process_children(obj, comp_folder)
         elif name.startswith("CCC_"):
-            process_children(obj, base / name)
+            process_children(obj, base / make_foldername(obj))
         else:
             print(f"[CC Exporter] Skipping non-CC_/CCC_ top-level: {name}")
 
