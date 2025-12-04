@@ -9,7 +9,7 @@ extends Node3D
 
 @export var global_config: CharacterComponent
 
-func _rebuild_tree():
+func _rebuild_tree() -> void:
 	if not Engine.is_editor_hint(): return
 
 	if blender_export_path == "" or not DirAccess.dir_exists_absolute(blender_export_path):
@@ -42,7 +42,7 @@ func _rebuild_tree():
 
 ## ------------------ Merge Logic: Preserve user edits, update file system data ------------------
 
-func _merge_scanned_into_config(existing: CharacterComponent, scanned: CharacterComponent):
+func _merge_scanned_into_config(existing: CharacterComponent, scanned: CharacterComponent) -> void:
 	"""
 	Merges scanned filesystem data into existing config:
 	- Updates read-only fields (name, glb_path, cc_id) from scan
@@ -67,7 +67,7 @@ func _merge_scanned_into_config(existing: CharacterComponent, scanned: Character
 	for scanned_child in scanned.children:
 		if scanned_child.cc_id != "" and existing_children_map.has(scanned_child.cc_id):
 			# Item exists: merge recursively to preserve edits
-			var existing_child = existing_children_map[scanned_child.cc_id]
+			var existing_child: CharacterComponent = existing_children_map[scanned_child.cc_id]
 			_merge_scanned_into_config(existing_child, scanned_child)
 			merged_children.append(existing_child)
 			existing_children_map.erase(scanned_child.cc_id)  # Mark as processed
@@ -125,8 +125,7 @@ func _scan_component(path: String) -> CharacterComponent:
 		if f == "": break
 		if dir.current_is_dir() and (f.begins_with("CC_") or f.begins_with("CCC_")):
 			var child := _scan_component(path.path_join(f))
-			if child != null: 
-				comp.children.append(child)
+			if child != null: comp.children.append(child)
 	dir.list_dir_end()
 
 	return comp
