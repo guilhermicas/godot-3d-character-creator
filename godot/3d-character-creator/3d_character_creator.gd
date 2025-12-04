@@ -9,15 +9,6 @@ extends Node3D
 
 @export var global_config: CharacterComponent
 
-# Loaded global config data
-# TODO: i notice in the .tscn of this scene, that global config is being saved there
-#       is there a need for saving the things to JSON since the editor itself already
-#	    stores these values?
-var _global_config_file: Dictionary = {}
-var _loading: bool = false
-
-func _ready(): if Engine.is_editor_hint(): _load_config()
-
 func _rebuild_tree():
 	if not Engine.is_editor_hint(): return
 
@@ -25,86 +16,86 @@ func _rebuild_tree():
 		global_config = null
 		return
 
-	_global_config_file = _load_config() # Dictionary representation of global_config.json
-	global_config = _scan_component(blender_export_path)
+	# All store instances point to the same tres file
+	# Godot already handles edits made on the Inspector window
+	# So we just have a "pointer" from all scenes to the same tres Resource
+	var config_path := blender_export_path.path_join("global_config.tres")
+
+	# Load existing config or create new one
+	if FileAccess.file_exists(config_path):
+		global_config = load(config_path)
+		if global_config == null:
+			push_error("Failed to load global_config.tres")
+			global_config = CharacterComponent.new()
+	else:
+		global_config = CharacterComponent.new()
+
+	# Scan filesystem and merge with existing config
+	var scanned_tree := _scan_component(blender_export_path)
+	_merge_scanned_into_config(global_config, scanned_tree)
+
+	# Save the updated config
+	var save_result := ResourceSaver.save(global_config, config_path)
+	if save_result != OK: push_error("Failed to save global_config.tres")
+
 	notify_property_list_changed()
 
-func _load_config() -> Dictionary:
-	_loading = true
+## ------------------ Merge Logic: Preserve user edits, update file system data ------------------
 
-	var config_path := blender_export_path.path_join("global_config.json")
-	if not FileAccess.file_exists(config_path):
-		_loading = false
-		return {}
+func _merge_scanned_into_config(existing: CharacterComponent, scanned: CharacterComponent):
+	"""
+	Merges scanned filesystem data into existing config:
+	- Updates read-only fields (name, glb_path, cc_id) from scan
+	- Preserves user-editable fields (display_name, metadata)
+	- Adds new items, removes missing items
+	"""
+	
+	# Update read-only fields from scan
+	existing.name = scanned.name
+	existing.glb_path = scanned.glb_path
+	existing.cc_id = scanned.cc_id
 
-	var file := FileAccess.open(config_path, FileAccess.READ)
-	if file == null:
-		push_error("Cannot open config: " + config_path)
-		_loading = false
-		return {}
+	# Build a map of existing children by cc_id for quick lookup
+	var existing_children_map := {}
+	for child in existing.children:
+		if child.cc_id != "":
+			existing_children_map[child.cc_id] = child
 
-	var json := JSON.new()
-	var error := json.parse(file.get_as_text())
-	file.close()
+	# Build new children array by merging scanned with existing
+	var merged_children: Array[CharacterComponent] = []
 
-	if error != OK:
-		push_error("JSON parse error in global_config.json: " + json.get_error_message())
-		_loading = false
-		return {}
+	for scanned_child in scanned.children:
+		if scanned_child.cc_id != "" and existing_children_map.has(scanned_child.cc_id):
+			# Item exists: merge recursively to preserve edits
+			var existing_child = existing_children_map[scanned_child.cc_id]
+			_merge_scanned_into_config(existing_child, scanned_child)
+			merged_children.append(existing_child)
+			existing_children_map.erase(scanned_child.cc_id)  # Mark as processed
+		else:
+			# New item: use scanned data as-is
+			merged_children.append(scanned_child)
 
-	_loading = false
-	return json.data
+	# Note: Items in existing_children_map that weren't processed are now removed
+	# (they no longer exist in the filesystem)
 
-func _save_config():
-	if _loading or not Engine.is_editor_hint(): return
+	existing.children = merged_children
 
-	if blender_export_path == "" or global_config == null: return
-
-	var config_path := blender_export_path.path_join("global_config.json")
-
-	var data := {
-		"items": {}
-		# TODO: in the future, user may configure categories/tags, or maybe more dynamically what they want
-		#       so it can be configured for sorting and association with models
-	}
-
-	# Collect all items from tree
-	_collect_items_recursive(global_config, data["items"])
-
-	var file := FileAccess.open(config_path, FileAccess.WRITE)
-	if file == null:
-		push_error("Cannot write config: " + config_path)
-		return
-
-	file.store_string(JSON.stringify(data, "\t"))
-	file.close()
-	print("Saved global_config.json")
-
-func _collect_items_recursive(comp: CharacterComponent, items: Dictionary):
-	if comp.cc_id != "":
-		items[comp.cc_id] = {
-			"display_name": comp.display_name,
-			"metadata": comp.metadata.duplicate()
-		}
-
-	for child in comp.children: _collect_items_recursive(child, items)
-
-## ------------------ Functions below can be used by users to make their own UI ------------------
-# TODO: document these functions
-# TODO: maybe for a user to use these, we need to set a class_name on top of the file
-#       so this file can be referenced on other files
+## ------------------ Filesystem Scanning ------------------
 
 func _scan_component(path: String) -> CharacterComponent:
+	"""
+	Scans filesystem and creates a fresh component tree.
+	Does NOT look at existing config - that's handled by _merge_scanned_into_config.
+	"""
 	var dir := DirAccess.open(path)
 	if dir == null:
 		push_error("Cannot open: " + path)
 		return null
 
 	var comp := CharacterComponent.new()
-	comp._parent_node = self # TODO: if we use signal, this isnt needed
 	
 	var folder_name := path.get_file()
-	
+
 	# Extract CC_id from folder name (e.g., "CC_male_CC_id_9efe906c" -> "9efe906c")
 	if folder_name.contains("_CC_id_"):
 		var parts := folder_name.split("_CC_id_")
@@ -113,12 +104,6 @@ func _scan_component(path: String) -> CharacterComponent:
 	else:
 		comp.name = folder_name
 		comp.cc_id = ""
-
-	# Load global_config.json configuration for this CC_id
-	if comp.cc_id != "" and _global_config_file.has("items") and _global_config_file["items"].has(comp.cc_id):
-		var item_data: Dictionary = _global_config_file["items"][comp.cc_id]
-		if item_data.has("display_name") and item_data["display_name"] != null: comp.display_name = item_data["display_name"]
-		if item_data.has("metadata") and item_data["metadata"] != null: comp.metadata = item_data["metadata"].duplicate()
 
 	# Find .glb file (for CC_ components, not CCC_ collections)
 	var glb_file := ""
@@ -140,7 +125,8 @@ func _scan_component(path: String) -> CharacterComponent:
 		if f == "": break
 		if dir.current_is_dir() and (f.begins_with("CC_") or f.begins_with("CCC_")):
 			var child := _scan_component(path.path_join(f))
-			if child != null: comp.children.append(child)
+			if child != null: 
+				comp.children.append(child)
 	dir.list_dir_end()
 
 	return comp
