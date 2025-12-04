@@ -1,5 +1,7 @@
-*.blend1
-*__pycache__/
 .godot/
 /android/
 *.tmp
+*.import
+.import/
+*.blend1
+*__pycache__/
