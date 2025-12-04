@@ -6,19 +6,26 @@
 [sub_resource type="Resource" id="Resource_aki0f"]
 script = ExtResource("2_aki0f")
 name = "CC_t_shirt"
-glb_path = "res://character_config/CC_male/CCC_shirts/CC_t_shirt/CC_t_shirt.glb"
-cc_id = "a8852d1f-ec1c-4ebe-a6d2-494a9320031d"
+glb_path = "res://character_config/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
+cc_id = "dcefb103"
+display_name = "T-Shirt"
+metadata = {
+"Price": 19.99
+}
 
 [sub_resource type="Resource" id="Resource_be0c8"]
 script = ExtResource("2_aki0f")
 name = "CCC_shirts"
+cc_id = "6327b5f1"
+display_name = "Awesome Shirts"
 children = Array[ExtResource("2_aki0f")]([SubResource("Resource_aki0f")])
 
 [sub_resource type="Resource" id="Resource_gcf7q"]
 script = ExtResource("2_aki0f")
 name = "CC_male"
-glb_path = "res://character_config/CC_male/CC_male.glb"
-cc_id = "1d010f0f-ccdf-4016-90e1-9ba31dec55f9"
+glb_path = "res://character_config/CC_male_CC_id_9efe906c/CC_male.glb"
+cc_id = "9efe906c"
+display_name = "Male"
 children = Array[ExtResource("2_aki0f")]([SubResource("Resource_be0c8")])
 
 [sub_resource type="Resource" id="Resource_0pyk6"]
@@ -42,7 +49,7 @@ glow_enabled = true
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
-character_tree = SubResource("Resource_0pyk6")
+global_config = SubResource("Resource_0pyk6")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")
