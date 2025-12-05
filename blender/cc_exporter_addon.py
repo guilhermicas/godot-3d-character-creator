@@ -156,8 +156,8 @@ class CC_OT_export(Operator):
 
         # Process top-level objects
         top_objects = [o for o in context.scene.objects if not o.parent]
-        if not top_objects:
-            self.report({'WARNING'}, "No top-level objects found in scene.")
+        if not top_objects or len(top_objects) > 1 or not top_objects[0].name.startswith("CCC_"):
+            self.report({'WARNING'}, "The top level object must be a single CCC_")
             return {'CANCELLED'}
 
         process_hierarchy(top_objects, target)

@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://dhl0v14olhdbc"]
 
 [ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
-[ext_resource type="Resource" uid="uid://cn5qlea1ycpyt" path="res://character_config/global_config.tres" id="2_aki0f"]
+[ext_resource type="Resource" uid="uid://dvdlspd7eyl" path="res://character_config/global_config.tres" id="2_aki0f"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -39,6 +39,21 @@ offset_right = -0.15209961
 offset_bottom = -0.23999023
 metadata/_edit_use_anchors_ = true
 
+[node name="CCC_" type="VBoxContainer" parent="UI"]
+visible = false
+layout_mode = 0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 561.0
+offset_bottom = 42.0
+
+[node name="TitleLabel" type="Label" parent="UI/CCC_"]
+layout_mode = 2
+text = "container title"
+
+[node name="ModelList" type="ItemList" parent="UI/CCC_"]
+layout_mode = 2
+
 [node name="HBoxContainer" type="HBoxContainer" parent="UI"]
 layout_mode = 1
 anchors_preset = -1
@@ -59,3 +74,16 @@ theme_override_constants/margin_bottom = 15
 [node name="Panel" type="Panel" parent="UI/HBoxContainer/MarginContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/HBoxContainer/MarginContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3

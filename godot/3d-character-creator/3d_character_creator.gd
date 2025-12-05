@@ -9,6 +9,10 @@ extends Node3D
 
 @export var global_config: CharacterComponent
 
+## ------------------ UI ------------------
+@onready var model_tree: VBoxContainer = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer
+@onready var ccc_ref: VBoxContainer = $UI/CCC_ # script will duplicate this to create the UI dynamically
+
 func _rebuild_tree() -> void:
 	if not Engine.is_editor_hint(): return
 
@@ -30,8 +34,18 @@ func _rebuild_tree() -> void:
 	else:
 		global_config = CharacterComponent.new()
 
+	# Make sure that top level object is CCC_ in blender export path,
+	# and start compiling the object tree with the top level CCC_
+	var dirs: PackedStringArray = DirAccess.get_directories_at(blender_export_path)
+	var first: String = ""
+	for d in dirs: if d.begins_with("CCC_"): first = d; break
+	if first == "":
+		push_error("No top level CCC_ found")
+		global_config = null # TODO: do we want to set this to null?
+		return
 	# Scan filesystem and merge with existing config
-	var scanned_tree := _scan_component(blender_export_path)
+	var scanned_tree := _scan_component(blender_export_path.path_join(first))
+
 	_merge_scanned_into_config(global_config, scanned_tree)
 
 	# Save the updated config
