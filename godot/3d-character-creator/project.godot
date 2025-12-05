@@ -11,6 +11,7 @@ config_version=5
 [application]
 
 config/name="3D Character Creator"
+run/main_scene="uid://dhl0v14olhdbc"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 

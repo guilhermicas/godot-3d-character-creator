@@ -1,3 +1,4 @@
+# TODO: aparently they don't export properly if objects are hidden, find way to bypass this
 # NOTE: Windows has a max path length of 260 chars, if the tree exceeds this, export will fail. (why Windows, why)
 bl_info = {
     "name": "3D Character Creator Exporter",

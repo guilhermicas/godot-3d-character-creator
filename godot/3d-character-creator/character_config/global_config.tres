@@ -1,28 +1,34 @@
-[gd_resource type="Resource" script_class="CharacterComponent" load_steps=5 format=3 uid="uid://dvdlspd7eyl"]
+[gd_resource type="Resource" script_class="CharacterComponent" load_steps=6 format=3 uid="uid://cn5qlea1ycpyt"]
 
 [ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="1_sfhlp"]
 
 [sub_resource type="Resource" id="Resource_sfhlp"]
 script = ExtResource("1_sfhlp")
+name = "CC_female"
+glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
+cc_id = "57be63e5"
+
+[sub_resource type="Resource" id="Resource_k3sre"]
+script = ExtResource("1_sfhlp")
 name = "CC_t_shirt"
 glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
 cc_id = "dcefb103"
 
-[sub_resource type="Resource" id="Resource_k3sre"]
+[sub_resource type="Resource" id="Resource_bgmwl"]
 script = ExtResource("1_sfhlp")
 name = "CCC_shirts"
 cc_id = "6327b5f1"
-children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_sfhlp")])
+children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_k3sre")])
 
-[sub_resource type="Resource" id="Resource_bgmwl"]
+[sub_resource type="Resource" id="Resource_tewd7"]
 script = ExtResource("1_sfhlp")
 name = "CC_male"
 glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
 cc_id = "9efe906c"
-children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_k3sre")])
+children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_bgmwl")])
 
 [resource]
 script = ExtResource("1_sfhlp")
 name = "CCC_genders"
 cc_id = "66650050"
-children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_bgmwl")])
+children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_sfhlp"), SubResource("Resource_tewd7")])
