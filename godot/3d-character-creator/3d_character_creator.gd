@@ -114,6 +114,9 @@ func _rebuild_tree() -> void:
 		global_config = null
 		return
 
+	# All store instances point to the same tres file
+	# Godot already handles edits made on the Inspector window
+	# So we just have a "pointer" from all scenes to the same tres Resource
 	var config_path := blender_export_path.path_join("global_config.tres")
 
 	# Load or create config
@@ -182,7 +185,7 @@ func _scan_component(path: String) -> CharacterComponent:
 	var comp := CharacterComponent.new()
 	var folder_name := path.get_file()
 
-	# Extract CC_id from folder name
+	# Extract CC_id from folder name (e.g., "CC_male_CC_id_9efe906c" -> "9efe906c")
 	if folder_name.contains("_CC_id_"):
 		var parts := folder_name.split("_CC_id_")
 		comp.name = parts[0]
