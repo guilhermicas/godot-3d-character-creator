@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://dhl0v14olhdbc"]
+[gd_scene load_steps=12 format=3 uid="uid://dhl0v14olhdbc"]
 
 [ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
 [ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="2_aki0f"]
@@ -47,6 +47,8 @@ sky = SubResource("Sky_be0c8")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_aki0f"]
+
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
@@ -60,7 +62,13 @@ transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545
 shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22660904, 0.1644308, 1.4310383)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0827354, 1.0072794, 1.949155)
+
+[node name="CharacterPreviewSpot" type="Node3D" parent="."]
+
+[node name="CharacterPlacePreview" type="MeshInstance3D" parent="CharacterPreviewSpot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_aki0f")
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
