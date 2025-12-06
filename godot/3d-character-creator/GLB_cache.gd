@@ -3,7 +3,7 @@
 # Usage: GLBCache.get_cached(cc_id) / GLBCache.cache(cc_id, scene)
 class_name GLBCache
 
-static var MAX_LOADED := 64
+static var MAX_LOADED := 64 # TODO: this should be an export var on 3d_character_creator.gd for more dev control
 
 # Maps cc_id -> {scene: PackedScene, timestamp: int}
 # timestamp tracks last access time for LRU eviction

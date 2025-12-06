@@ -48,6 +48,8 @@ func _poll_loading_items() -> void:
 
 			# Update UI to remove loading indicator
 			if _item_list_map.has(cc_id):
+				# TODO: this could be cleaner, maybe make a function for this
+				#       since this is used in two spots
 				var data: Dictionary = _item_list_map[cc_id]
 				var item_list := data.list as ItemList
 				var idx: int = data.idx
@@ -83,6 +85,8 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	# Populate and start loading all visible CC_ children
 	for child in component.children:
 		if child.name.begins_with("CC_"):
+			# TODO: this could be cleaner, maybe make a function for this
+			#       since this is used in two spots
 			var display := child.display_name if child.display_name else child.name
 
 			# Check if already cached
