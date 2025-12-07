@@ -1,38 +1,7 @@
-[gd_scene load_steps=12 format=3 uid="uid://dhl0v14olhdbc"]
+[gd_scene load_steps=7 format=3 uid="uid://dhl0v14olhdbc"]
 
 [ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
-[ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="2_aki0f"]
-
-[sub_resource type="Resource" id="Resource_sfhlp"]
-script = ExtResource("2_aki0f")
-name = "CC_female"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
-cc_id = "57be63e5"
-
-[sub_resource type="Resource" id="Resource_k3sre"]
-script = ExtResource("2_aki0f")
-name = "CC_t_shirt"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
-cc_id = "dcefb103"
-
-[sub_resource type="Resource" id="Resource_bgmwl"]
-script = ExtResource("2_aki0f")
-name = "CCC_shirts"
-cc_id = "6327b5f1"
-children = Array[ExtResource("2_aki0f")]([SubResource("Resource_k3sre")])
-
-[sub_resource type="Resource" id="Resource_tewd7"]
-script = ExtResource("2_aki0f")
-name = "CC_male"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
-cc_id = "9efe906c"
-children = Array[ExtResource("2_aki0f")]([SubResource("Resource_bgmwl")])
-
-[sub_resource type="Resource" id="Resource_aki0f"]
-script = ExtResource("2_aki0f")
-name = "CCC_genders"
-cc_id = "66650050"
-children = Array[ExtResource("2_aki0f")]([SubResource("Resource_sfhlp"), SubResource("Resource_tewd7")])
+[ext_resource type="Resource" uid="uid://cptm1sxc8hqbv" path="res://character_config/global_config.tres" id="2_aki0f"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -52,7 +21,7 @@ glow_enabled = true
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
-global_config = SubResource("Resource_aki0f")
+global_config = ExtResource("2_aki0f")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")

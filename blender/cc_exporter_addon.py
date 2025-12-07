@@ -155,13 +155,16 @@ class CC_OT_export(Operator):
 
         # Safety check and cleanup
         if props.delete_and_recreate:
-            if len(str(target.resolve())) <= 3:
+            if len(str(target.resolve())) <= 10:
                 self.report({'ERROR'}, f"Refusing to delete unsafe path: {target}")
                 return {'CANCELLED'}
             if target.exists():
                 try:
                     from shutil import rmtree
-                    rmtree(target)
+                    # This prevents removal of global_config, or other potential config files
+                    for item in target.iterdir():
+                        if item.is_dir():
+                            rmtree(item)
                 except Exception as e:
                     self.report({'ERROR'}, f"Failed to delete destination: {e}")
                     return {'CANCELLED'}
