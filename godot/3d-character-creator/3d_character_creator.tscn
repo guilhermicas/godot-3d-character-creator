@@ -28,7 +28,7 @@ glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe
 cc_id = "9efe906c"
 children = Array[ExtResource("2_aki0f")]([SubResource("Resource_bgmwl")])
 
-[sub_resource type="Resource" id="Resource_be0c8"]
+[sub_resource type="Resource" id="Resource_aki0f"]
 script = ExtResource("2_aki0f")
 name = "CCC_genders"
 cc_id = "66650050"
@@ -52,7 +52,7 @@ glow_enabled = true
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
 blender_export_path = "res://character_config"
-global_config = SubResource("Resource_be0c8")
+global_config = SubResource("Resource_aki0f")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")

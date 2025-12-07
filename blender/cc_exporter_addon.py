@@ -1,4 +1,3 @@
-# TODO: aparently they don't export properly if objects are hidden, find way to bypass this
 # NOTE: Windows has a max path length of 260 chars, if the tree exceeds this, export will fail. (why Windows, why)
 bl_info = {
     "name": "3D Character Creator Exporter",
@@ -65,17 +64,34 @@ def export_glb(obj, folder):
     folder.mkdir(parents=True, exist_ok=True)
     out_path = folder / f"{obj.name}.glb"
 
-    with selection_context(objs):
-        bpy.ops.export_scene.gltf(
-            filepath=str(out_path),
-            export_format='GLB',
-            use_selection=True,
-            export_apply=True,
-            export_extras=True
-        )
+    # Store original visibility states for objects and their data
+    # This is necessary because hidden objects are not exported
+    # So we temporarily unhide them
+    visibility_state = {}
 
-    print(f"[CC Exporter] Exported {obj.name} -> {out_path}")
-    return out_path
+    for o in objs:
+        visibility_state[o] = o.hide_get() # Store object visibility
+        o.hide_set(False) # Unhide object
+
+    try:
+        with selection_context(objs):
+            bpy.ops.export_scene.gltf(
+                filepath=str(out_path),
+                export_format='GLB',
+                use_selection=True,
+                export_apply=True,
+                export_extras=True
+            )
+        print(f"[CC Exporter] Exported {obj.name} -> {out_path}")
+        result = out_path
+    except Exception as e:
+        print(f"[CC Exporter] Export failed for {obj.name}: {e}")
+        result = None
+    finally:
+        # Restore original visibility states
+        for o, previous_hide_state in visibility_state.items(): o.hide_set(previous_hide_state)
+
+    return result
 
 def process_children(parent, folder):
     """Process children: CC_ objects export, CCC_ objects create subfolders."""
