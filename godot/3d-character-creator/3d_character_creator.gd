@@ -63,7 +63,9 @@ func _create_placeholder_icon() -> void:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGB8)
 	img.fill(Color.BLACK)
 	_placeholder_icon = ImageTexture.create_from_image(img)
-
+# TODO: maybe this function, and _expand_ccc could be in another script file
+#       because this may be useful for the user to program their own UI.
+# NOTE: This should only be done when my UI is polished, so all the features are fleshed out in these functions
 func _expand_top_level() -> void:
 	_clear_ui()
 	export_character.clear()
