@@ -1,7 +1,6 @@
-[gd_scene load_steps=7 format=3 uid="uid://dhl0v14olhdbc"]
+[gd_scene load_steps=6 format=3 uid="uid://dhl0v14olhdbc"]
 
 [ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://3d_character_creator.gd" id="1_wih4m"]
-[ext_resource type="Resource" uid="uid://cptm1sxc8hqbv" path="res://character_config/global_config.tres" id="2_aki0f"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -20,8 +19,7 @@ glow_enabled = true
 
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
-blender_export_path = "res://character_config"
-global_config = ExtResource("2_aki0f")
+local_config_path = "uid://ds47qbbdhgua1"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")

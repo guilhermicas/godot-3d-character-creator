@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="LocalConfig" load_steps=8 format=3 uid="uid://ds47qbbdhgua1"]
+
+[ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="1_3dj20"]
+[ext_resource type="Script" uid="uid://digiyxjrkorhy" path="res://local_config.gd" id="2_ei6vx"]
+
+[sub_resource type="Resource" id="Resource_q1c5j"]
+script = ExtResource("1_3dj20")
+name = "CCC_genders"
+cc_id = "66650050"
+display_name = "Genders"
+
+[sub_resource type="Resource" id="Resource_lh0nr"]
+script = ExtResource("1_3dj20")
+name = "CC_female"
+glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
+cc_id = "57be63e5"
+display_name = "Female"
+
+[sub_resource type="Resource" id="Resource_cq7p6"]
+script = ExtResource("1_3dj20")
+name = "CC_male"
+glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
+cc_id = "9efe906c"
+display_name = "Male"
+
+[sub_resource type="Resource" id="Resource_bdj10"]
+script = ExtResource("1_3dj20")
+name = "CCC_shirts"
+cc_id = "6327b5f1"
+display_name = "Awesome Shirts"
+
+[sub_resource type="Resource" id="Resource_03rrn"]
+script = ExtResource("1_3dj20")
+name = "CC_t_shirt"
+glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
+cc_id = "dcefb103"
+display_name = "Alternative T-Shirt Name"
+
+[resource]
+script = ExtResource("2_ei6vx")
+items = Array[ExtResource("1_3dj20")]([SubResource("Resource_q1c5j"), SubResource("Resource_lh0nr"), SubResource("Resource_cq7p6"), SubResource("Resource_bdj10"), SubResource("Resource_03rrn")])

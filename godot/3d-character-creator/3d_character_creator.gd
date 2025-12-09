@@ -2,35 +2,32 @@
 extends Node3D
 
 ## ------------------ Inspector Configuration ------------------
-@export_dir var blender_export_path: String:
+@export_file("*.tres") var local_config_path: String = "":
 	set(value):
-		blender_export_path = value
-		_rebuild_tree()
+		local_config_path = value
+		update_configuration_warnings()
 
-@export var global_config: CharacterComponent
-@export var export_character: Array[CharacterComponent] = []
+## ------------------ Runtime State (not exported) ------------------
+var _local_config: CharacterComponent
+var export_character: Array[CharacterComponent] = []
 
 ## ------------------ UI References ------------------
 @onready var model_tree: VBoxContainer = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer
-@onready var ccc_ref: VBoxContainer = $UI/CCC_ # script will duplicate this to create the UI dynamically
+@onready var ccc_ref: VBoxContainer = $UI/CCC_
 @onready var character_preview_spot: Node3D = $CharacterPreviewSpot
 
 ## ------------------ Runtime State ------------------
-var _active_cccs: Array[Control] = [] # Currently displayed CCC containers
-var _loading_items: Dictionary = {}  # cc_id -> CharacterComponent for in-progress loads
-var _item_list_map: Dictionary = {}  # cc_id -> {list: ItemList, idx: int} for UI updates
-# TODO: maybe this var shouldn't exist
-#       instead of the _create_placeholder_icon, we could have
-#       _get_thumbnail_safe, which tries to get thumbnail based
-#       on the model's config or whatever, if it fails returns the
-#       image, and this var doesn't exist
-var _placeholder_icon: ImageTexture # 32x32 black square for items
+var _active_cccs: Array[Control] = []
+var _loading_items: Dictionary = {}
+var _item_list_map: Dictionary = {}
+var _placeholder_icon: ImageTexture
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		_create_placeholder_icon()
-		ccc_ref.visible = false # Hide reference node
-		if global_config: _expand_top_level()
+		ccc_ref.visible = false
+		_load_local_config_for_runtime()
+		if _local_config: _expand_top_level()
 
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint(): return
@@ -46,10 +43,7 @@ func _poll_loading_items() -> void:
 			GLBCache.cache(cc_id, comp.instanced_model)
 			_loading_items.erase(cc_id)
 
-			# Update UI to remove loading indicator
 			if _item_list_map.has(cc_id):
-				# TODO: this could be cleaner, maybe make a function for this
-				#       since this is used in two spots
 				var data: Dictionary = _item_list_map[cc_id]
 				var item_list := data.list as ItemList
 				var idx: int = data.idx
@@ -63,14 +57,50 @@ func _create_placeholder_icon() -> void:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGB8)
 	img.fill(Color.BLACK)
 	_placeholder_icon = ImageTexture.create_from_image(img)
-# TODO: maybe this function, and _expand_ccc could be in another script file
-#       because this may be useful for the user to program their own UI.
-# NOTE: This should only be done when my UI is polished, so all the features are fleshed out in these functions
+
+func _load_local_config_for_runtime() -> void:
+	if local_config_path == "":
+		push_error("No local_config_path set. Cannot build character UI.")
+		return
+
+	# Load the local config resource
+	var local_res: LocalConfig = load(local_config_path)
+	if local_res == null:
+		push_error("Failed to load local config: " + local_config_path)
+		return
+
+	# Get the actual filesystem path (handles uid:// paths)
+	var actual_path := local_res.resource_path
+	if actual_path == "":
+		push_error("Local config has no resource_path")
+		return
+
+	# Load global config from the same directory as local config
+	var config_dir := actual_path.get_base_dir()
+	var global_config_path := config_dir.path_join("global_config.tres")
+
+	if not FileAccess.file_exists(global_config_path):
+		push_error("Global config not found at: " + global_config_path)
+		return
+
+	var global_config: CharacterComponent = load(global_config_path)
+	if global_config == null:
+		push_error("Failed to load global config: " + global_config_path)
+		return
+
+	_local_config = CharacterComponent.assemble_from_global(local_res.items, global_config)
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings: PackedStringArray = []
+	if local_config_path == "":
+		warnings.append("⚠ Local config path not set. Required for runtime character building.")
+	return warnings
+
 func _expand_top_level() -> void:
 	_clear_ui()
 	export_character.clear()
 	_update_character_preview()
-	_expand_ccc(global_config, 0, model_tree)
+	_expand_ccc(_local_config, 0, model_tree)
 
 ## ------------------ UI Construction ------------------
 
@@ -82,23 +112,16 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	var item_list := ccc_node.get_node("ModelList") as ItemList
 
 	title_label.text = component.display_name if component.display_name else component.name
-	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * 0.15)) # Lighter → darker background color
+	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * 0.15))
 
-	# Populate and start loading all visible CC_ children
 	for child in component.children:
 		if child.name.begins_with("CC_"):
-			# TODO: this could be cleaner, maybe make a function for this
-			#       since this is used in two spots
 			var display := child.display_name if child.display_name else child.name
 
-			# Check if already cached
 			var cached := GLBCache.get_cached(child.cc_id)
 			if cached:
 				child.instanced_model = cached
 			elif child.glb_path != "" and not _loading_items.has(child.cc_id):
-				# Start async load
-				# TODO: Replace text loading indicator with animated TextureRect + shader for polish
-				#       maybe a gif the user can configure?
 				display += " [Loading...]"
 				ResourceLoader.load_threaded_request(child.glb_path)
 				_loading_items[child.cc_id] = child
@@ -116,27 +139,12 @@ func _on_item_selected(idx: int, depth: int, ccc_node: Control, parent_container
 	var item_list := ccc_node.get_node("ModelList") as ItemList
 	var selected := item_list.get_item_metadata(idx) as CharacterComponent
 
-	# Deep copy component but share instanced_model pointer:
-	# Instead of re-importing the glb just for the exported character,
-	# just point the already loaded glb to the exported character
-	# TODO: double check if this is good, and if maybe i can shave a few lines off of this
-	var exported_comp := CharacterComponent.new()
-	exported_comp.name = selected.name
-	exported_comp.glb_path = selected.glb_path
-	exported_comp.cc_id = selected.cc_id
-	exported_comp.display_name = selected.display_name
-	exported_comp.metadata = selected.metadata.duplicate()
-	exported_comp.instanced_model = selected.instanced_model
-
-	# Update export_character: set at depth, clear deeper levels
 	export_character.resize(depth + 1)
-	export_character[depth] = exported_comp
+	export_character[depth] = selected
 
-	# Clear CCCs and update preview
 	_clear_cccs_after(ccc_node)
 	_update_character_preview()
 
-	# Expand child CCCs if any
 	for child in selected.children:
 		if child.name.begins_with("CCC_"):
 			_expand_ccc(child, depth + 1, parent_container)
@@ -162,124 +170,12 @@ func _clear_ui() -> void:
 	_item_list_map.clear()
 
 func _update_character_preview() -> void:
-	# Clear existing preview instances
 	for child: Node in character_preview_spot.get_children():
 		child.queue_free()
 
-	# TODO: Use hierarchy assembly function
-	#       to properly parent instances based on global_config authority
-	#       For now, instantiate flat until proper bone/animation hierarchy is implemented
+	# TODO: Use CharacterComponent.assemble_from_global() for proper hierarchy
+	#       with bone/animation parenting from global_config authority
 	for comp in export_character:
 		if comp.instanced_model:
 			var instance := comp.instanced_model.instantiate()
 			character_preview_spot.add_child(instance)
-
-## ------------------ Editor Tree Building ------------------
-
-func _rebuild_tree() -> void:
-	if not Engine.is_editor_hint(): return
-
-	if blender_export_path == "" or not DirAccess.dir_exists_absolute(blender_export_path):
-		global_config = null
-		return
-	# All store instances point to the same tres file
-	# Godot already handles edits made on the Inspector window
-	# So we just have a "pointer" from all scenes to the same tres Resource
-	var config_path := blender_export_path.path_join("global_config.tres")
-
-	# Load or create config
-	if FileAccess.file_exists(config_path):
-		global_config = load(config_path)
-		if global_config == null:
-			push_error("Failed to load global_config.tres")
-			global_config = CharacterComponent.new()
-	else:
-		global_config = CharacterComponent.new()
-
-	# Find top-level CCC_
-	var dirs := DirAccess.get_directories_at(blender_export_path)
-	var first_dir := ""
-	for d in dirs:
-		if d.begins_with("CCC_"):
-			first_dir = d
-			break
-
-	if first_dir == "":
-		push_error("No top-level CCC_ found")
-		global_config = null
-		return
-
-	# Scan and merge
-	var scanned := _scan_component(blender_export_path.path_join(first_dir))
-	_merge_scanned_into_config(global_config, scanned)
-
-	var save_result := ResourceSaver.save(global_config, config_path)
-	if save_result != OK:
-		push_error("Failed to save global_config.tres")
-
-	notify_property_list_changed()
-
-func _merge_scanned_into_config(existing: CharacterComponent, scanned: CharacterComponent) -> void:
-	# Update read-only fields
-	existing.name = scanned.name
-	existing.glb_path = scanned.glb_path
-	existing.cc_id = scanned.cc_id
-
-	# Build map of existing children by cc_id
-	var existing_map := {}
-	for child in existing.children:
-		if child.cc_id != "":
-			existing_map[child.cc_id] = child
-
-	# Merge scanned children with existing
-	var merged: Array[CharacterComponent] = []
-	for scanned_child in scanned.children:
-		if scanned_child.cc_id != "" and existing_map.has(scanned_child.cc_id):
-			var existing_child := existing_map[scanned_child.cc_id] as CharacterComponent
-			_merge_scanned_into_config(existing_child, scanned_child)
-			merged.append(existing_child)
-			existing_map.erase(scanned_child.cc_id)
-		else:
-			merged.append(scanned_child)
-
-	existing.children = merged
-
-func _scan_component(path: String) -> CharacterComponent:
-	var dir := DirAccess.open(path)
-	if dir == null:
-		push_error("Cannot open: " + path)
-		return null
-
-	var comp := CharacterComponent.new()
-	var folder_name := path.get_file()
-
-	# Extract CC_id from folder name (e.g., "CC_male_CC_id_9efe906c" -> "9efe906c")
-	if folder_name.contains("_CC_id_"):
-		var parts := folder_name.split("_CC_id_")
-		comp.name = parts[0]
-		comp.cc_id = parts[1] if parts.size() > 1 else ""
-	else:
-		comp.name = folder_name
-		comp.cc_id = ""
-
-	# Find .glb file
-	dir.list_dir_begin()
-	var f := dir.get_next()
-	while f != "":
-		if not dir.current_is_dir() and f.ends_with(".glb"):
-			comp.glb_path = path.path_join(f)
-			break
-		f = dir.get_next()
-	dir.list_dir_end()
-
-	# Recurse into CC_/CCC_ folders
-	dir.list_dir_begin()
-	f = dir.get_next()
-	while f != "":
-		if dir.current_is_dir() and (f.begins_with("CC_") or f.begins_with("CCC_")):
-			var child := _scan_component(path.path_join(f))
-			if child: comp.children.append(child)
-		f = dir.get_next()
-	dir.list_dir_end()
-
-	return comp
