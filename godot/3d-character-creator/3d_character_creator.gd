@@ -77,6 +77,7 @@ func _load_local_config_for_runtime() -> void:
 
 	# Load global config from the same directory as local config
 	var config_dir := actual_path.get_base_dir()
+	# TODO: be careful with this, because this implies local configs and global config are on the same folder
 	var global_config_path := config_dir.path_join("global_config.tres")
 
 	if not FileAccess.file_exists(global_config_path):
