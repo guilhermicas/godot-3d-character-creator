@@ -34,7 +34,7 @@ script = ExtResource("1_3dj20")
 name = "CC_t_shirt"
 glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
 cc_id = "dcefb103"
-display_name = "Alternative T-Shirt Name"
+display_name = "T-Shirt"
 
 [resource]
 script = ExtResource("2_ei6vx")

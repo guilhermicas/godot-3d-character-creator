@@ -18,8 +18,7 @@ var selected_component: CharacterComponent
 func _ready() -> void:
 	if tree:
 		tree.item_selected.connect(_on_tree_item_selected)
-		if editable_structure:
-			tree.button_clicked.connect(_on_tree_button_clicked)
+		tree.button_clicked.connect(_on_tree_button_clicked)
 
 func set_config(config: CharacterComponent, editable: bool, global_ref: CharacterComponent = null) -> void:
 	root_config = config

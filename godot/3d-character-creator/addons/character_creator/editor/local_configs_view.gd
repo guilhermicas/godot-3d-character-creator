@@ -166,10 +166,10 @@ func _on_add_child_requested(parent: CharacterComponent) -> void:
 		_save_current_config()
 		popup.queue_free()
 	)
-	popup.canceled.connect(func(): popup.queue_free())
-	
+	popup.popup_hide.connect(func(): popup.queue_free())
+
 	add_child(popup)
-	popup.popup(Rect2i(get_global_mouse_position(), Vector2i(200, 100)))
+	popup.popup_on_parent(Rect2i(get_viewport().get_mouse_position(), Vector2i(1, 1)))
 
 func _on_remove_requested(component: CharacterComponent) -> void:
 	# Find parent and remove this child
