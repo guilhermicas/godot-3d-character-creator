@@ -1,18 +1,18 @@
 [gd_resource type="Resource" script_class="CharacterComponent" load_steps=6 format=3 uid="uid://cptm1sxc8hqbv"]
 
-[ext_resource type="Script" uid="uid://dl7npn5ppwyto" path="res://character_component.gd" id="1_sfhlp"]
+[ext_resource type="Script" uid="uid://dslyss3be62i6" path="res://addons/character_creator/resources/character_component.gd" id="1_sfhlp"]
 
 [sub_resource type="Resource" id="Resource_sfhlp"]
 script = ExtResource("1_sfhlp")
 name = "CC_female"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
 cc_id = "57be63e5"
 display_name = "Female"
 
 [sub_resource type="Resource" id="Resource_k3sre"]
 script = ExtResource("1_sfhlp")
 name = "CC_t_shirt"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
 cc_id = "dcefb103"
 display_name = "T-Shirt"
 
@@ -26,7 +26,7 @@ children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_k3sre")])
 [sub_resource type="Resource" id="Resource_tewd7"]
 script = ExtResource("1_sfhlp")
 name = "CC_male"
-glb_path = "res://character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
 cc_id = "9efe906c"
 display_name = "Male"
 children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_bgmwl")])

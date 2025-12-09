@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://bidgtphxxooxr"]
 
-[ext_resource type="Script" uid="uid://k60wjmsjqvul" path="res://addons/character_creator/3d_character_creator.gd" id="1_wih4m"]
+[ext_resource type="Script" uid="uid://b8royuvd6ux4w" path="res://addons/character_creator/resources/3d_character_creator.gd" id="1_wih4m"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
