@@ -27,4 +27,4 @@ children = Array[ExtResource("1_alhuc")]([SubResource("Resource_1lkdc")])
 
 [resource]
 script = ExtResource("2_1lkdc")
-items = Array[ExtResource("1_alhuc")]([SubResource("Resource_wk7xr"), SubResource("Resource_alhuc")])
+items = Array[ExtResource("1_alhuc")]([SubResource("Resource_wk7xr")])

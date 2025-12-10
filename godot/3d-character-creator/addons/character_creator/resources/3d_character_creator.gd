@@ -137,6 +137,21 @@ func _expand_top_level() -> void:
 
 ## ------------------ UI Construction ------------------
 
+func _is_in_export_character(cc_id: String) -> bool:
+	for comp in export_character:
+		if comp.cc_id == cc_id:
+			return true
+	return false
+
+func _has_descendant_in_export(component: CharacterComponent) -> bool:
+	# Check if this component or any of its descendants are in export_character
+	if _is_in_export_character(component.cc_id):
+		return true
+	for child in component.children:
+		if _has_descendant_in_export(child):
+			return true
+	return false
+
 func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> void:
 	var ccc_node := ccc_ref.duplicate() as VBoxContainer
 	ccc_node.visible = true
@@ -146,6 +161,9 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 
 	title_label.text = component.display_name if component.display_name else component.name
 	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * 0.15))
+
+	var selected_child: CharacterComponent = null
+	var selected_idx := -1
 
 	for child in component.children:
 		if child.name.begins_with("CC_"):
@@ -163,10 +181,24 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 			item_list.set_item_metadata(idx, child)
 			_item_list_map[child.cc_id] = {"list": item_list, "idx": idx}
 
+			# Check if this item should be pre-selected
+			if _is_in_export_character(child.cc_id):
+				selected_child = child
+				selected_idx = idx
+
 	item_list.item_selected.connect(_on_item_selected.bind(depth, ccc_node, parent))
 
 	parent.add_child(ccc_node)
 	_active_cccs.append(ccc_node)
+
+	# Pre-select item if found in export_character
+	if selected_idx >= 0:
+		item_list.select(selected_idx)
+		# Auto-expand children if this item has descendants in export_character
+		if selected_child and _has_descendant_in_export(selected_child):
+			for child in selected_child.children:
+				if child.name.begins_with("CCC_"):
+					_expand_ccc(child, depth + 1, parent)
 
 func _on_item_selected(idx: int, depth: int, ccc_node: Control, parent_container: Control) -> void:
 	var item_list := ccc_node.get_node("ModelList") as ItemList
