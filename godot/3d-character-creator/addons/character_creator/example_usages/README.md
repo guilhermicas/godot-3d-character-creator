@@ -38,7 +38,7 @@ example_usages/
 3. Use arrow keys to move the player
 4. Walk up to the cube and press **E** to enter the character creator
 5. Select character components
-6. Press the "Done" button (TODO: needs UI button) to exit and apply changes
+6. Press the "Done" button to exit and apply changes
 7. The character mesh updates on the player automatically
 
 **Key concepts:**
