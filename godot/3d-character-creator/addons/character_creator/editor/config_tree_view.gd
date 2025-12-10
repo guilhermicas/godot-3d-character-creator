@@ -145,7 +145,72 @@ func _show_properties(component: CharacterComponent) -> void:
 			display_container.add_child(revert_btn)
 	
 	properties_panel.add_child(display_container)
-	
+
+	# Defaults & Mandatory (CCC_ only)
+	if component.glb_path == "" and not component.children.is_empty():
+		properties_panel.add_child(HSeparator.new())
+
+		var defaults_label := Label.new()
+		defaults_label.text = "Defaults & Mandatory (CCC_ only)"
+		defaults_label.add_theme_font_size_override("font_size", 14)
+		properties_panel.add_child(defaults_label)
+
+		# Mandatory checkbox
+		var mandatory_container := HBoxContainer.new()
+		var mandatory_check := CheckBox.new()
+		mandatory_check.text = "Is Child Mandatory"
+		mandatory_check.button_pressed = component.is_child_mandatory
+		mandatory_check.toggled.connect(func(pressed: bool):
+			component.is_child_mandatory = pressed
+			property_changed.emit(component, "is_child_mandatory", pressed)
+			_rebuild_tree()
+			_show_properties(component)  # Refresh to update dropdown
+		)
+		mandatory_container.add_child(mandatory_check)
+		properties_panel.add_child(mandatory_container)
+
+		# Default child dropdown
+		var default_container := HBoxContainer.new()
+
+		var default_label := Label.new()
+		default_label.text = "Default Child:"
+		default_label.custom_minimum_size.x = 100
+		default_container.add_child(default_label)
+
+		var default_dropdown := OptionButton.new()
+		default_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		# Populate with CC_ children
+		var default_idx := 0  # Start at 0 for "(None)"
+		default_dropdown.add_item("(None)")
+		default_dropdown.set_item_metadata(0, "")  # Store empty string for None
+
+		var dropdown_idx := 1  # Start children at index 1
+		for child in component.children:
+			if child.name.begins_with("CC_"):
+				var display := child.display_name if child.display_name else child.name
+				default_dropdown.add_item(display)
+				default_dropdown.set_item_metadata(dropdown_idx, child.cc_id)
+				if child.cc_id == component.default_child_id:
+					default_idx = dropdown_idx
+				dropdown_idx += 1
+
+		# Select current default
+		default_dropdown.select(default_idx)
+
+		default_dropdown.item_selected.connect(func(selected_idx: int):
+			var cc_id = default_dropdown.get_item_metadata(selected_idx)
+			if cc_id == null:
+				component.default_child_id = ""
+			else:
+				component.default_child_id = cc_id
+			property_changed.emit(component, "default_child_id", component.default_child_id)
+			_rebuild_tree()
+		)
+
+		default_container.add_child(default_dropdown)
+		properties_panel.add_child(default_container)
+
 	# TODO: Add metadata editor
 
 func _find_in_global(cc_id: String) -> CharacterComponent:

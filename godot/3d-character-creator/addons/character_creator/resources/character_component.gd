@@ -44,14 +44,50 @@ class_name CharacterComponent
 @export var display_name: String = ""
 @export var metadata: Dictionary = {}
 
-# TODO: Future features (Phase 4 - Defaults & Mandatory):
-# @export var default_child_id: String = ""  # CCC_ only: which child to pre-select
-# @export var is_child_mandatory: bool = false  # CCC_ only: must pick ≥1 child
+# Defaults & Mandatory (CCC_ only)
+@export_group("Defaults & Mandatory (CCC_ only)")
+@export var default_child_id: String = ""  ## Which CC_ child to auto-select
+@export var is_child_mandatory: bool = false  ## Must have ≥1 child selected
 
 # Hierarchy
 @export var children: Array[CharacterComponent] = []
 
 var instanced_model: PackedScene = null  # Not exported, transient runtime data
+
+## Validates and auto-fixes defaults & mandatory flags
+func validate_defaults() -> Array[String]:
+	var warnings: Array[String] = []
+
+	# Auto-fix: No children = reset mandatory and default
+	if children.is_empty():
+		if is_child_mandatory or default_child_id != "":
+			is_child_mandatory = false
+			default_child_id = ""
+		return warnings
+
+	# Auto-fix: Mandatory requires default (pick first child)
+	if is_child_mandatory and default_child_id == "":
+		default_child_id = children[0].cc_id
+		warnings.append("Auto-fixed: Set default_child_id to first child '%s'" % children[0].name)
+
+	# Validate default exists in children
+	if default_child_id != "":
+		var found := false
+		for child in children:
+			if child.cc_id == default_child_id:
+				found = true
+				break
+		if not found:
+			warnings.append("Invalid default_child_id '%s' - not found in children" % default_child_id)
+			default_child_id = ""  # Clear invalid default
+			is_child_mandatory = false  # Can't be mandatory without valid default
+
+	# Recursively validate children
+	for child in children:
+		var child_warnings := child.validate_defaults()
+		warnings.append_array(child_warnings)
+
+	return warnings
 
 # Assemble hierarchical tree from flat array using global_config as authority
 static func assemble_from_global(
@@ -82,7 +118,9 @@ static func _assemble_recursive(
 	result.cc_id = source.cc_id
 	result.display_name = source.display_name
 	result.metadata = source.metadata.duplicate()
-	
+	result.default_child_id = source.default_child_id
+	result.is_child_mandatory = source.is_child_mandatory
+
 	# Apply local overrides
 	if source.cc_id != "" and override_map.has(source.cc_id):
 		var override: CharacterComponent = override_map[source.cc_id]
@@ -90,6 +128,10 @@ static func _assemble_recursive(
 			result.display_name = override.display_name
 		if not override.metadata.is_empty():
 			result.metadata = override.metadata.duplicate()
+		# Override defaults/mandatory if set in local config
+		if override.default_child_id != "":
+			result.default_child_id = override.default_child_id
+		result.is_child_mandatory = override.is_child_mandatory
 	
 	# Recursively process children
 	for child in source.children:

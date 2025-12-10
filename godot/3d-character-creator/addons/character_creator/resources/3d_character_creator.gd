@@ -152,6 +152,52 @@ func _has_descendant_in_export(component: CharacterComponent) -> bool:
 			return true
 	return false
 
+func _auto_select_default(container: CharacterComponent, depth: int, parent_container: Control) -> void:
+	print("DEBUG _auto_select_default: container=", container.name, " depth=", depth, " default_child_id=", container.default_child_id)
+
+	# Find the default child
+	var default_child: CharacterComponent = null
+
+	for child in container.children:
+		print("  - Checking child: ", child.name, " cc_id=", child.cc_id)
+		if child.cc_id == container.default_child_id:
+			default_child = child
+			print("  -> FOUND default child: ", child.name)
+			break
+
+	if default_child == null:
+		print("  -> NO default child found, returning")
+		return  # No valid default
+
+	# Add to export_character
+	if export_character.size() <= depth:
+		export_character.resize(depth + 1)
+	export_character[depth] = default_child
+	print("  -> Added to export_character[", depth, "]: ", default_child.name)
+
+	# Find and select in the ItemList that was just created for this container
+	# The container's ItemList should be in the last expanded CCC node
+	print("  -> Searching _active_cccs (count: ", _active_cccs.size(), ")")
+	for ccc in _active_cccs:
+		var item_list := ccc.get_node_or_null("ModelList") as ItemList
+		if item_list:
+			for i in range(item_list.item_count):
+				var item_meta = item_list.get_item_metadata(i) as CharacterComponent
+				if item_meta and item_meta.cc_id == default_child.cc_id:
+					print("    -> Selecting item ", i, " in ItemList")
+					item_list.select(i)
+					break
+
+	# Update preview
+	_update_character_preview()
+
+	# Recursively expand and apply defaults to nested mandatory containers
+	for child in default_child.children:
+		if child.name.begins_with("CCC_"):
+			_expand_ccc(child, depth + 1, parent_container)
+			if child.is_child_mandatory and child.default_child_id != "":
+				_auto_select_default(child, depth + 1, parent_container)
+
 func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> void:
 	var ccc_node := ccc_ref.duplicate() as VBoxContainer
 	ccc_node.visible = true
@@ -210,9 +256,14 @@ func _on_item_selected(idx: int, depth: int, ccc_node: Control, parent_container
 	_clear_cccs_after(ccc_node)
 	_update_character_preview()
 
+	# Expand child containers
 	for child in selected.children:
 		if child.name.begins_with("CCC_"):
 			_expand_ccc(child, depth + 1, parent_container)
+
+			# If this child is mandatory, auto-select its default
+			if child.is_child_mandatory and child.default_child_id != "":
+				_auto_select_default(child, depth + 1, parent_container)
 
 func _clear_cccs_after(from_node: Control) -> void:
 	var start_removing := false
@@ -280,8 +331,18 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	if not _local_config:
 		_local_config = _global_config
 
-	# Initialize export_character with input (pre-select current character's items)
-	export_character = input_config.duplicate()
+	# Validate defaults in config before using
+	var validation_warnings: Array[String] = _local_config.validate_defaults()
+	for warning in validation_warnings:
+		push_warning("Config validation: " + warning)
+
+	# Initialize export_character
+	if input_config.is_empty():
+		# New character: Apply top-level defaults
+		export_character.clear()
+	else:
+		# Existing character: Pre-populate with current selections
+		export_character = input_config.duplicate()
 
 	# Show UI, camera, Done button, and optionally Cancel button
 	ui.visible = true
@@ -290,6 +351,19 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	done_button.visible = true
 	cancel_button.visible = show_cancel_button
 	_expand_top_level()
+
+	# Apply top-level defaults for new characters (after UI is built)
+	if input_config.is_empty():
+		print("DEBUG: Applying top-level defaults for new character")
+		print("  _local_config.name: ", _local_config.name)
+		print("  _local_config.is_child_mandatory: ", _local_config.is_child_mandatory)
+		print("  _local_config.default_child_id: ", _local_config.default_child_id)
+
+		# The _local_config itself IS the top-level container (e.g., CCC_genders)
+		# Check if it has mandatory defaults
+		if _local_config.is_child_mandatory and _local_config.default_child_id != "":
+			print("  -> Calling _auto_select_default for: ", _local_config.name)
+			_auto_select_default(_local_config, 0, model_tree)
 
 func exit_and_save() -> void:
 	if not _is_interactive_mode:
