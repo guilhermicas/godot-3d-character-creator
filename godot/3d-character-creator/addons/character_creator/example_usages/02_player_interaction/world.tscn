@@ -1,0 +1,57 @@
+[gd_scene load_steps=8 format=3 uid="uid://dw7x2n3y4mp5q"]
+
+[ext_resource type="PackedScene" uid="uid://cgq3suy0dvqow" path="res://addons/character_creator/example_usages/02_player_interaction/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://bidgtphxxooxr" path="res://addons/character_creator/3d_character_creator.tscn" id="2_creator"]
+[ext_resource type="Script" uid="uid://beolt8v7dbxxy" path="res://addons/character_creator/example_usages/02_player_interaction/interaction_cube.gd" id="3_interact"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_env"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_world"]
+background_mode = 2
+sky = SubResource("Sky_env")
+tonemap_mode = 2
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_interact"]
+size = Vector3(2, 2, 2)
+
+[node name="World" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_world")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 5, 0)
+shadow_enabled = true
+
+[node name="Ground" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(20, 1, 20)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Store" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+
+[node name="InteractionCube" type="Area3D" parent="Store"]
+script = ExtResource("3_interact")
+creator_scene_path = NodePath("../CharacterCreator")
+target_character_path = NodePath("../../Player/CCharacter")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Store/InteractionCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_interact")
+
+[node name="VisualCube" type="CSGBox3D" parent="Store/InteractionCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+size = Vector3(2, 2, 2)
+
+[node name="CharacterCreator" parent="Store" instance=ExtResource("2_creator")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+local_config_path = "uid://ds47qbbdhgua1"

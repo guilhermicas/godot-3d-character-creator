@@ -6,3 +6,4 @@
 
 [node name="3DCharacterCreator" parent="." instance=ExtResource("1_m3ij7")]
 local_config_path = "res://addons/character_creator/example_usages/character_config/fancy_shop.tres"
+standalone_mode = true
