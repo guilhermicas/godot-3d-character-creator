@@ -19,6 +19,7 @@ func _ready() -> void:
 			push_error("InteractionCube: creator_scene_path does not point to a valid node")
 		elif _creator_scene.has_signal("character_saved"):
 			_creator_scene.character_saved.connect(_on_character_saved)
+			_creator_scene.character_cancelled.connect(_on_character_cancelled)
 		else:
 			push_error("InteractionCube: creator_scene does not have 'character_saved' signal")
 
@@ -73,6 +74,15 @@ func _on_character_saved(config: Array[CharacterComponent]) -> void:
 		_target_character.apply_character_config(config)
 
 	# Re-enable player movement
+	_enable_player_movement()
+
+func _on_character_cancelled() -> void:
+	_in_creator = false
+
+	# Re-enable player movement
+	_enable_player_movement()
+
+func _enable_player_movement() -> void:
 	var player := get_tree().get_first_node_in_group("player")
 	if player and player.has_method("enable_movement"):
 		player.enable_movement()

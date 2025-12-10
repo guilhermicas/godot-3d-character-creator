@@ -6,6 +6,7 @@ extends Node3D
 
 ## ------------------ Signals ------------------
 signal character_saved(config: Array[CharacterComponent])
+signal character_cancelled()
 
 ## ------------------ Inspector Configuration ------------------
 @export_file("*.tres") var local_config_path: String = "":
@@ -14,6 +15,7 @@ signal character_saved(config: Array[CharacterComponent])
 		update_configuration_warnings()
 
 @export var standalone_mode: bool = false
+@export var show_cancel_button: bool = true
 
 ## ------------------ Runtime State (not exported) ------------------
 var _global_config: CharacterComponent
@@ -27,6 +29,7 @@ var _is_interactive_mode: bool = false
 @onready var ccc_ref: VBoxContainer = $UI/CCC_
 @onready var character_preview_spot: Node3D = $CharacterPreviewSpot
 @onready var done_button: Button = $UI/DoneButton
+@onready var cancel_button: Button = $UI/CancelButton
 @onready var camera: Camera3D = $Camera3D
 
 ## ------------------ Runtime State ------------------
@@ -41,6 +44,7 @@ func _ready() -> void:
 		ccc_ref.visible = false
 		character_preview_spot.visible = false
 		done_button.pressed.connect(_on_done_pressed)
+		cancel_button.pressed.connect(_on_cancel_pressed)
 
 		# Load config if path provided (defines available items inventory)
 		if local_config_path != "":
@@ -247,11 +251,12 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	# Initialize export_character with input (pre-select current character's items)
 	export_character = input_config.duplicate()
 
-	# Show UI, camera, and Done button
+	# Show UI, camera, Done button, and optionally Cancel button
 	ui.visible = true
 	camera.current = true
 	character_preview_spot.visible = true
 	done_button.visible = true
+	cancel_button.visible = show_cancel_button
 	_expand_top_level()
 
 func exit_and_save() -> void:
@@ -264,6 +269,7 @@ func exit_and_save() -> void:
 	camera.current = false
 	character_preview_spot.visible = false
 	done_button.visible = false
+	cancel_button.visible = false
 
 	# Emit a duplicate of the configuration (arrays are passed by reference!)
 	character_saved.emit(export_character.duplicate())
@@ -277,6 +283,34 @@ func exit_and_save() -> void:
 	export_character.clear()
 	_is_interactive_mode = false
 
+func exit_and_discard() -> void:
+	if not _is_interactive_mode:
+		push_warning("exit_and_discard() called but not in interactive mode")
+		return
+
+	# Hide UI and camera
+	ui.visible = false
+	camera.current = false
+	character_preview_spot.visible = false
+	done_button.visible = false
+	cancel_button.visible = false
+
+	# Emit cancellation signal (so interaction systems can clean up)
+	character_cancelled.emit()
+
+	# Clear character preview meshes
+	for child: Node in character_preview_spot.get_children():
+		child.queue_free()
+
+	# Clear state (changes discarded)
+	_clear_ui()
+	export_character.clear()
+	_is_interactive_mode = false
+
 func _on_done_pressed() -> void:
 	if _is_interactive_mode:
 		exit_and_save()
+
+func _on_cancel_pressed() -> void:
+	if _is_interactive_mode:
+		exit_and_discard()
