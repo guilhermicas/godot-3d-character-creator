@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cw8e7jm2yxqyh"]
+
+[ext_resource type="Script" path="res://addons/character_creator/resources/c_character.gd" id="1_abc123"]
+
+[node name="CCharacter" type="Node3D"]
+script = ExtResource("1_abc123")

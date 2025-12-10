@@ -140,6 +140,7 @@ func _scan_and_build_global_config() -> void:
 	var save_result := ResourceSaver.save(global_config, config_path)
 	if save_result == OK:
 		print("✅ Global config saved: " + config_path)
+		_update_project_settings(config_path)
 	else:
 		push_error("Failed to save global_config.tres")
 
@@ -210,3 +211,18 @@ func _merge_scanned_into_config(existing: CharacterComponent, scanned: Character
 			merged.append(scanned_child)
 
 	existing.children = merged
+
+func _update_project_settings(_config_path: String) -> void:
+	# Only store blender_export_path in ProjectSettings
+	# Global config is always at {blender_export_path}/character_config/global_config.tres
+	if not ProjectSettings.has_setting("character_creator/blender_export_path"):
+		ProjectSettings.set_setting("character_creator/blender_export_path", "")
+		ProjectSettings.set_initial_value("character_creator/blender_export_path", "")
+
+	ProjectSettings.set_setting("character_creator/blender_export_path", blender_export_path)
+
+	var save_result := ProjectSettings.save()
+	if save_result == OK:
+		print("✅ ProjectSettings updated")
+	else:
+		push_warning("Failed to save ProjectSettings")

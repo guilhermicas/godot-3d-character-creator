@@ -19,7 +19,6 @@ glow_enabled = true
 
 [node name="3DCharacterCreator" type="Node3D"]
 script = ExtResource("1_wih4m")
-local_config_path = "uid://ds47qbbdhgua1"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gcf7q")
@@ -38,12 +37,29 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 mesh = SubResource("CapsuleMesh_aki0f")
 
 [node name="UI" type="Control" parent="."]
+visible = false
 layout_mode = 3
 anchor_right = 1.0001321
 anchor_bottom = 1.0003704
 offset_right = -0.15209961
 offset_bottom = -0.23999023
 metadata/_edit_use_anchors_ = true
+
+[node name="DoneButton" type="Button" parent="UI"]
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -50.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Done"
 
 [node name="CCC_" type="VBoxContainer" parent="UI"]
 visible = false

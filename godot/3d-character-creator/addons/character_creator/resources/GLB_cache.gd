@@ -33,3 +33,12 @@ static func cache(cc_id: String, scene: PackedScene) -> void:
 
 static func clear() -> void:
 	_cache.clear()
+
+static func evict_except(used_ids: Dictionary) -> void:
+	var to_evict: Array[String] = []
+	for cc_id: String in _cache.keys():
+		if not used_ids.has(cc_id):
+			to_evict.append(cc_id)
+
+	for cc_id in to_evict:
+		_cache.erase(cc_id)

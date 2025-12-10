@@ -1,20 +1,33 @@
 @tool
 extends Node3D
 
+## Character creator UI scene for editing character configurations.
+## Can be used standalone (with local_config_path) or via interaction API.
+
+## ------------------ Signals ------------------
+signal character_saved(config: Array[CharacterComponent])
+
 ## ------------------ Inspector Configuration ------------------
 @export_file("*.tres") var local_config_path: String = "":
 	set(value):
 		local_config_path = value
 		update_configuration_warnings()
 
+@export var standalone_mode: bool = false
+
 ## ------------------ Runtime State (not exported) ------------------
+var _global_config: CharacterComponent
 var _local_config: CharacterComponent
 var export_character: Array[CharacterComponent] = []
+var _is_interactive_mode: bool = false
 
 ## ------------------ UI References ------------------
+@onready var ui: Control = $UI
 @onready var model_tree: VBoxContainer = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer
 @onready var ccc_ref: VBoxContainer = $UI/CCC_
 @onready var character_preview_spot: Node3D = $CharacterPreviewSpot
+@onready var done_button: Button = $UI/DoneButton
+@onready var camera: Camera3D = $Camera3D
 
 ## ------------------ Runtime State ------------------
 var _active_cccs: Array[Control] = []
@@ -26,8 +39,18 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		_create_placeholder_icon()
 		ccc_ref.visible = false
-		_load_local_config_for_runtime()
-		if _local_config: _expand_top_level()
+		character_preview_spot.visible = false
+		done_button.pressed.connect(_on_done_pressed)
+
+		# Load config if path provided (defines available items inventory)
+		if local_config_path != "":
+			_load_local_config_for_runtime()
+
+			# Only auto-show UI in standalone mode
+			if standalone_mode and _local_config:
+				ui.visible = true
+				camera.current = true
+				_expand_top_level()
 
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint(): return
@@ -99,7 +122,12 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 func _expand_top_level() -> void:
 	_clear_ui()
-	export_character.clear()
+
+	# Only clear export_character in standalone mode
+	# In interactive mode, it's pre-populated with current character
+	if not _is_interactive_mode:
+		export_character.clear()
+
 	_update_character_preview()
 	_expand_ccc(_local_config, 0, model_tree)
 
@@ -177,6 +205,78 @@ func _update_character_preview() -> void:
 	# TODO: Use CharacterComponent.assemble_from_global() for proper hierarchy
 	#       with bone/animation parenting from global_config authority
 	for comp in export_character:
+		# Ensure model is loaded (either from cache or load fresh)
+		if not comp.instanced_model and comp.glb_path != "":
+			var cached := GLBCache.get_cached(comp.cc_id)
+			if cached:
+				comp.instanced_model = cached
+			else:
+				comp.instanced_model = load(comp.glb_path)
+				if comp.instanced_model:
+					GLBCache.cache(comp.cc_id, comp.instanced_model)
+				else:
+					push_error("Failed to load GLB: " + comp.glb_path)
+
 		if comp.instanced_model:
 			var instance := comp.instanced_model.instantiate()
 			character_preview_spot.add_child(instance)
+
+## ------------------ Public API for Interactive Mode ------------------
+
+func enter_with_character(input_config: Array[CharacterComponent]) -> void:
+	_is_interactive_mode = true
+
+	# Load global config from ProjectSettings (if not already loaded)
+	if not _global_config:
+		if not ProjectSettings.has_setting("character_creator/blender_export_path"):
+			push_error("3DCharacterCreator: ProjectSettings missing 'character_creator/blender_export_path'")
+			return
+
+		var export_path: String = ProjectSettings.get_setting("character_creator/blender_export_path")
+		var global_path := export_path.path_join("global_config.tres")
+		_global_config = load(global_path)
+
+		if _global_config == null:
+			push_error("Failed to load global config from: " + global_path)
+			return
+
+	# Use local_config if already loaded (shop inventory), otherwise use global
+	if not _local_config:
+		_local_config = _global_config
+
+	# Initialize export_character with input (pre-select current character's items)
+	export_character = input_config.duplicate()
+
+	# Show UI, camera, and Done button
+	ui.visible = true
+	camera.current = true
+	character_preview_spot.visible = true
+	done_button.visible = true
+	_expand_top_level()
+
+func exit_and_save() -> void:
+	if not _is_interactive_mode:
+		push_warning("exit_and_save() called but not in interactive mode")
+		return
+
+	# Hide UI and camera
+	ui.visible = false
+	camera.current = false
+	character_preview_spot.visible = false
+	done_button.visible = false
+
+	# Emit a duplicate of the configuration (arrays are passed by reference!)
+	character_saved.emit(export_character.duplicate())
+
+	# Clear character preview meshes
+	for child: Node in character_preview_spot.get_children():
+		child.queue_free()
+
+	# Clear state
+	_clear_ui()
+	export_character.clear()
+	_is_interactive_mode = false
+
+func _on_done_pressed() -> void:
+	if _is_interactive_mode:
+		exit_and_save()

@@ -15,6 +15,11 @@ run/main_scene="uid://dhl0v14olhdbc"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[character_creator]
+
+blender_export_path="res://addons/character_creator/example_usages/character_config"
+global_config_path="res://addons/character_creator/example_usages/character_config/global_config.tres"
+
 [debug]
 
 gdscript/warnings/untyped_declaration=1
