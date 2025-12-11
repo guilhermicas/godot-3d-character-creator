@@ -127,3 +127,22 @@ grow_vertical = 2
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+
+[node name="StandaloneUI" type="VBoxContainer" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI"]
+layout_mode = 2
+text = "Character Name:"
+
+[node name="NameField" type="LineEdit" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI"]
+layout_mode = 2
+placeholder_text = "Enter character name..."
+
+[node name="ExportButton" type="Button" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI"]
+layout_mode = 2
+text = "Export Character"
+
+[node name="Separator" type="HSeparator" parent="UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI"]
+layout_mode = 2

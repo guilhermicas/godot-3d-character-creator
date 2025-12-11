@@ -21,7 +21,7 @@ signal character_cancelled()
 var _global_config: CharacterComponent
 var _local_config: CharacterComponent
 var export_character: Array[CharacterComponent] = []
-var _is_interactive_mode: bool = false
+var _session_active: bool = false  ## True when UI is active (standalone OR interactive)
 
 ## ------------------ UI References ------------------
 @onready var ui: Control = $UI
@@ -31,6 +31,9 @@ var _is_interactive_mode: bool = false
 @onready var done_button: Button = $UI/DoneButton
 @onready var cancel_button: Button = $UI/CancelButton
 @onready var camera: Camera3D = $Camera3D
+@onready var standalone_ui: VBoxContainer = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI
+@onready var name_field: LineEdit = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI/NameField
+@onready var export_button: Button = $UI/HBoxContainer/MarginContainer/Panel/ScrollContainer/VBoxContainer/StandaloneUI/ExportButton
 
 ## ------------------ Runtime State ------------------
 var _active_cccs: Array[Control] = []
@@ -45,6 +48,7 @@ func _ready() -> void:
 		character_preview_spot.visible = false
 		done_button.pressed.connect(_on_done_pressed)
 		cancel_button.pressed.connect(_on_cancel_pressed)
+		export_button.pressed.connect(_on_export_pressed)
 
 		# Load config if path provided (defines available items inventory)
 		if local_config_path != "":
@@ -52,8 +56,13 @@ func _ready() -> void:
 
 			# Only auto-show UI in standalone mode
 			if standalone_mode and _local_config:
+				_session_active = true
 				ui.visible = true
 				camera.current = true
+				character_preview_spot.visible = true
+				standalone_ui.visible = true
+				done_button.visible = false
+				cancel_button.visible = false
 				_expand_top_level()
 
 func _process(_delta: float) -> void:
@@ -129,7 +138,7 @@ func _expand_top_level() -> void:
 
 	# Only clear export_character in standalone mode
 	# In interactive mode, it's pre-populated with current character
-	if not _is_interactive_mode:
+	if standalone_mode:
 		export_character.clear()
 
 	_update_character_preview()
@@ -153,38 +162,29 @@ func _has_descendant_in_export(component: CharacterComponent) -> bool:
 	return false
 
 func _auto_select_default(container: CharacterComponent, depth: int, parent_container: Control) -> void:
-	print("DEBUG _auto_select_default: container=", container.name, " depth=", depth, " default_child_id=", container.default_child_id)
-
 	# Find the default child
 	var default_child: CharacterComponent = null
 
 	for child in container.children:
-		print("  - Checking child: ", child.name, " cc_id=", child.cc_id)
 		if child.cc_id == container.default_child_id:
 			default_child = child
-			print("  -> FOUND default child: ", child.name)
 			break
 
 	if default_child == null:
-		print("  -> NO default child found, returning")
 		return  # No valid default
 
 	# Add to export_character
 	if export_character.size() <= depth:
 		export_character.resize(depth + 1)
 	export_character[depth] = default_child
-	print("  -> Added to export_character[", depth, "]: ", default_child.name)
 
 	# Find and select in the ItemList that was just created for this container
-	# The container's ItemList should be in the last expanded CCC node
-	print("  -> Searching _active_cccs (count: ", _active_cccs.size(), ")")
 	for ccc in _active_cccs:
 		var item_list := ccc.get_node_or_null("ModelList") as ItemList
 		if item_list:
 			for i in range(item_list.item_count):
 				var item_meta = item_list.get_item_metadata(i) as CharacterComponent
 				if item_meta and item_meta.cc_id == default_child.cc_id:
-					print("    -> Selecting item ", i, " in ItemList")
 					item_list.select(i)
 					break
 
@@ -311,7 +311,7 @@ func _update_character_preview() -> void:
 ## ------------------ Public API for Interactive Mode ------------------
 
 func enter_with_character(input_config: Array[CharacterComponent]) -> void:
-	_is_interactive_mode = true
+	_session_active = true
 
 	# Load global config from ProjectSettings (if not already loaded)
 	if not _global_config:
@@ -348,26 +348,21 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	ui.visible = true
 	camera.current = true
 	character_preview_spot.visible = true
+	standalone_ui.visible = false
 	done_button.visible = true
 	cancel_button.visible = show_cancel_button
 	_expand_top_level()
 
 	# Apply top-level defaults for new characters (after UI is built)
 	if input_config.is_empty():
-		print("DEBUG: Applying top-level defaults for new character")
-		print("  _local_config.name: ", _local_config.name)
-		print("  _local_config.is_child_mandatory: ", _local_config.is_child_mandatory)
-		print("  _local_config.default_child_id: ", _local_config.default_child_id)
-
 		# The _local_config itself IS the top-level container (e.g., CCC_genders)
 		# Check if it has mandatory defaults
 		if _local_config.is_child_mandatory and _local_config.default_child_id != "":
-			print("  -> Calling _auto_select_default for: ", _local_config.name)
 			_auto_select_default(_local_config, 0, model_tree)
 
 func exit_and_save() -> void:
-	if not _is_interactive_mode:
-		push_warning("exit_and_save() called but not in interactive mode")
+	if not _session_active:
+		push_warning("exit_and_save() called but session not active")
 		return
 
 	# Hide UI and camera
@@ -387,11 +382,11 @@ func exit_and_save() -> void:
 	# Clear state
 	_clear_ui()
 	export_character.clear()
-	_is_interactive_mode = false
+	_session_active = false
 
 func exit_and_discard() -> void:
-	if not _is_interactive_mode:
-		push_warning("exit_and_discard() called but not in interactive mode")
+	if not _session_active:
+		push_warning("exit_and_discard() called but session not active")
 		return
 
 	# Hide UI and camera
@@ -411,12 +406,59 @@ func exit_and_discard() -> void:
 	# Clear state (changes discarded)
 	_clear_ui()
 	export_character.clear()
-	_is_interactive_mode = false
+	_session_active = false
 
 func _on_done_pressed() -> void:
-	if _is_interactive_mode:
+	if _session_active and not standalone_mode:
 		exit_and_save()
 
 func _on_cancel_pressed() -> void:
-	if _is_interactive_mode:
+	if _session_active and not standalone_mode:
 		exit_and_discard()
+
+func _on_export_pressed() -> void:
+	if not _session_active or not standalone_mode:
+		push_warning("Export button pressed but not in standalone mode")
+		return
+
+	var character_name := name_field.text.strip_edges()
+
+	if character_name.is_empty():
+		push_error("Character name is required for export")
+		return
+
+	# Validate that we have a character to export
+	if export_character.is_empty():
+		push_error("No character configured to export")
+		return
+
+	# Get export path from ProjectSettings
+	if not ProjectSettings.has_setting("character_creator/blender_export_path"):
+		push_error("ProjectSettings missing 'character_creator/blender_export_path'")
+		return
+
+	var export_path: String = ProjectSettings.get_setting("character_creator/blender_export_path")
+	var characters_dir := export_path.path_join("characters")
+
+	# Ensure characters directory exists
+	if not DirAccess.dir_exists_absolute(characters_dir):
+		DirAccess.make_dir_recursive_absolute(characters_dir)
+
+	# Save character config to disk
+	var file_name := character_name.to_snake_case() + ".tres"
+	var file_path := characters_dir.path_join(file_name)
+
+	# Create a LocalConfig resource and save the flat character array
+	# export_character is already flat (Array[CharacterComponent])
+	var local_res := LocalConfig.new()
+	local_res.items = export_character.duplicate()
+
+	var err := ResourceSaver.save(local_res, file_path)
+	if err == OK:
+		print("Character exported successfully to: ", file_path)
+		name_field.text = ""  # Clear the name field
+		export_character.clear()  # Clear the current character
+		_clear_ui()  # Clear UI
+		_expand_top_level()  # Reset to fresh state
+	else:
+		push_error("Failed to save character to: " + file_path)
