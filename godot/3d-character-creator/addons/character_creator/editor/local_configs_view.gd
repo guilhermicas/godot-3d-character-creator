@@ -156,11 +156,7 @@ func _on_add_child_requested(parent: CharacterComponent) -> void:
 	popup.id_pressed.connect(func(id: int):
 		var to_add := available[id]
 		var new_child := CharacterComponent.new()
-		new_child.cc_id = to_add.cc_id
-		new_child.name = to_add.name
-		new_child.glb_path = to_add.glb_path
-		new_child.display_name = to_add.display_name
-		new_child.metadata = to_add.metadata.duplicate()
+		CharacterComponent.copy_fields(to_add, new_child)
 		parent.children.append(new_child)
 		tree_view.set_config(current_config, true, global_config)
 		_save_current_config()
@@ -208,16 +204,7 @@ func _save_current_config() -> void:
 func _find_in_global(cc_id: String) -> CharacterComponent:
 	if not global_config:
 		return null
-	return _find_recursive(global_config, cc_id)
-
-func _find_recursive(node: CharacterComponent, cc_id: String) -> CharacterComponent:
-	if node.cc_id == cc_id:
-		return node
-	for child in node.children:
-		var found := _find_recursive(child, cc_id)
-		if found:
-			return found
-	return null
+	return TreeUtils.find_by_id(global_config, cc_id)
 
 func _has_child_with_id(parent: CharacterComponent, cc_id: String) -> bool:
 	for child in parent.children:

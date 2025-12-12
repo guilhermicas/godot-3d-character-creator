@@ -54,6 +54,22 @@ class_name CharacterComponent
 
 var instanced_model: PackedScene = null  # Not exported, transient runtime data
 
+## Get list of fields that should be serialized (flat storage)
+static func get_serialized_fields() -> Array[String]:
+	return ["cc_id", "name", "glb_path", "display_name", "metadata",
+			"default_child_id", "is_child_mandatory"]
+
+## Copy serialized fields from source to destination
+static func copy_fields(from: CharacterComponent, to: CharacterComponent) -> void:
+	to.cc_id = from.cc_id
+	to.name = from.name
+	to.glb_path = from.glb_path
+	to.display_name = from.display_name
+	to.metadata = from.metadata.duplicate()
+	to.default_child_id = from.default_child_id
+	to.is_child_mandatory = from.is_child_mandatory
+	# NOTE: children and instanced_model are NOT copied (transient/reconstructed)
+
 ## Validates and auto-fixes defaults & mandatory flags
 func validate_defaults() -> Array[String]:
 	var warnings: Array[String] = []
@@ -110,16 +126,10 @@ static func _assemble_recursive(
 	var is_component := source.glb_path != ""  # CC_ nodes have GLB paths
 	if is_component and not override_map.has(source.cc_id):
 		return null
-	
-	# Create copy with overrides
+
+	# Create copy with fields from source
 	var result := CharacterComponent.new()
-	result.name = source.name
-	result.glb_path = source.glb_path
-	result.cc_id = source.cc_id
-	result.display_name = source.display_name
-	result.metadata = source.metadata.duplicate()
-	result.default_child_id = source.default_child_id
-	result.is_child_mandatory = source.is_child_mandatory
+	copy_fields(source, result)
 
 	# Apply local overrides
 	if source.cc_id != "" and override_map.has(source.cc_id):
@@ -132,11 +142,11 @@ static func _assemble_recursive(
 		if override.default_child_id != "":
 			result.default_child_id = override.default_child_id
 		result.is_child_mandatory = override.is_child_mandatory
-	
+
 	# Recursively process children
 	for child in source.children:
 		var assembled := _assemble_recursive(child, override_map)
 		if assembled:
 			result.children.append(assembled)
-	
+
 	return result

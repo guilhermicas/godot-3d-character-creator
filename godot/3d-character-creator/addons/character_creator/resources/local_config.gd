@@ -16,13 +16,7 @@ static func _flatten_recursive(node: CharacterComponent, result: Array[Character
 	if node.cc_id != "":
 		# Store full component (allows overrides of display_name, metadata, defaults, etc.)
 		var flat := CharacterComponent.new()
-		flat.cc_id = node.cc_id
-		flat.name = node.name
-		flat.glb_path = node.glb_path
-		flat.display_name = node.display_name
-		flat.metadata = node.metadata.duplicate()
-		flat.default_child_id = node.default_child_id
-		flat.is_child_mandatory = node.is_child_mandatory
+		CharacterComponent.copy_fields(node, flat)
 		# NOTE: children array is NOT saved (reconstructed from global_config)
 		# NOTE: instanced_model is NOT saved (transient runtime data)
 		result.append(flat)

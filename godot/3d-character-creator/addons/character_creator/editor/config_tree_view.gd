@@ -77,10 +77,9 @@ func _on_tree_button_clicked(item: TreeItem, column: int, id: int, mouse_button:
 func _show_properties(component: CharacterComponent) -> void:
 	if not properties_panel:
 		return
-	
+
 	# Clear previous properties
-	for child in properties_panel.get_children():
-		child.queue_free()
+	UIUtils.clear_children(properties_panel)
 	
 	if not component:
 		return
@@ -216,13 +215,4 @@ func _show_properties(component: CharacterComponent) -> void:
 func _find_in_global(cc_id: String) -> CharacterComponent:
 	if not global_config:
 		return null
-	return _find_recursive(global_config, cc_id)
-
-func _find_recursive(node: CharacterComponent, cc_id: String) -> CharacterComponent:
-	if node.cc_id == cc_id:
-		return node
-	for child in node.children:
-		var found := _find_recursive(child, cc_id)
-		if found:
-			return found
-	return null
+	return TreeUtils.find_by_id(global_config, cc_id)

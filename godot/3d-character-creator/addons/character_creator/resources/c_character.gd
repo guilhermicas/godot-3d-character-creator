@@ -21,6 +21,7 @@ var _global_config: CharacterComponent
 var _character_save_path: String
 var _flat_config: Array[CharacterComponent] = []
 var _mesh_instances: Array[Node3D] = []
+var _used_cc_ids: Dictionary = {}  # Cache for GLB eviction
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -31,32 +32,28 @@ func _ready() -> void:
 	_rebuild_mesh()
 
 func _load_paths() -> void:
-	# Load paths from ProjectSettings
-	if not ProjectSettings.has_setting("character_creator/blender_export_path"):
-		push_error("CCharacter: ProjectSettings missing 'character_creator/blender_export_path'. Run editor plugin rescan.")
+	# Load global config using ConfigLoader utility
+	_global_config = ConfigLoader.load_global_config()
+	if _global_config == null:
 		return
-
-	var export_path: String = ProjectSettings.get_setting("character_creator/blender_export_path")
-
-	# Load global config (always at {blender_export_path}/global_config.tres)
-	var global_path := export_path.path_join("global_config.tres")
-	if not FileAccess.file_exists(global_path):
-		push_error("CCharacter: Global config not found at: " + global_path)
-		return
-
-	_global_config = load(global_path)
 
 	# Generate character save path from parent name
-	var char_name := get_parent().name.to_snake_case()
-	_character_save_path = export_path.path_join("characters/{0}.tres".format([char_name]))
+	var char_name := get_parent().name
+	_character_save_path = ConfigLoader.get_character_save_path(char_name)
 
 func get_character_config() -> Array[CharacterComponent]:
 	return _flat_config
 
 func apply_character_config(config: Array[CharacterComponent]) -> void:
 	_flat_config = config
+	_rebuild_used_ids_cache()
 	_save_to_disk()
 	_rebuild_mesh()
+
+func _rebuild_used_ids_cache() -> void:
+	_used_cc_ids.clear()
+	for comp in _flat_config:
+		_used_cc_ids[comp.cc_id] = true
 
 func _load_character() -> void:
 	if not FileAccess.file_exists(_character_save_path):
@@ -73,6 +70,7 @@ func _load_character() -> void:
 		return
 	
 	_flat_config = local_res.items
+	_rebuild_used_ids_cache()
 	print("CCharacter: Loaded character from " + _character_save_path)
 	character_loaded.emit()
 
@@ -140,10 +138,5 @@ func _instantiate_recursive(component: CharacterComponent, parent: Node3D) -> vo
 			_instantiate_recursive(child, current_node)
 
 func _free_unused_glbs() -> void:
-	# Build set of cc_ids currently in use
-	var used_ids := {}
-	for comp in _flat_config:
-		used_ids[comp.cc_id] = true
-	
-	# Evict from cache if not in use
-	GLBCache.evict_except(used_ids)
+	# Evict from cache using cached cc_ids set
+	GLBCache.evict_except(_used_cc_ids)

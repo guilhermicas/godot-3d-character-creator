@@ -41,6 +41,9 @@ var _loading_items: Dictionary = {}
 var _item_list_map: Dictionary = {}
 var _placeholder_icon: ImageTexture
 
+## ------------------ Constants ------------------
+const DEPTH_DARKENING_FACTOR := 0.15
+
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		_create_placeholder_icon()
@@ -147,10 +150,7 @@ func _expand_top_level() -> void:
 ## ------------------ UI Construction ------------------
 
 func _is_in_export_character(cc_id: String) -> bool:
-	for comp in export_character:
-		if comp.cc_id == cc_id:
-			return true
-	return false
+	return TreeUtils.is_in_flat_array(cc_id, export_character)
 
 func _has_descendant_in_export(component: CharacterComponent) -> bool:
 	# Check if this component or any of its descendants are in export_character
@@ -206,7 +206,7 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	var item_list := ccc_node.get_node("ModelList") as ItemList
 
 	title_label.text = component.display_name if component.display_name else component.name
-	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * 0.15))
+	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * DEPTH_DARKENING_FACTOR))
 
 	var selected_child: CharacterComponent = null
 	var selected_idx := -1
@@ -266,18 +266,15 @@ func _on_item_selected(idx: int, depth: int, ccc_node: Control, parent_container
 				_auto_select_default(child, depth + 1, parent_container)
 
 func _clear_cccs_after(from_node: Control) -> void:
-	var start_removing := false
-	var to_remove: Array[Control] = []
+	var idx := _active_cccs.find(from_node)
+	if idx == -1:
+		return
 
-	for ccc in _active_cccs:
-		if start_removing:
-			to_remove.append(ccc)
-		elif ccc == from_node:
-			start_removing = true
+	# Remove everything after idx
+	for i in range(idx + 1, _active_cccs.size()):
+		_active_cccs[i].queue_free()
 
-	for ccc in to_remove:
-		ccc.queue_free()
-		_active_cccs.erase(ccc)
+	_active_cccs.resize(idx + 1)
 
 func _clear_ui() -> void:
 	for ccc in _active_cccs:
@@ -286,8 +283,7 @@ func _clear_ui() -> void:
 	_item_list_map.clear()
 
 func _update_character_preview() -> void:
-	for child: Node in character_preview_spot.get_children():
-		child.queue_free()
+	UIUtils.clear_children(character_preview_spot)
 
 	# TODO: Use CharacterComponent.assemble_from_global() for proper hierarchy
 	#       with bone/animation parenting from global_config authority
@@ -313,18 +309,10 @@ func _update_character_preview() -> void:
 func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	_session_active = true
 
-	# Load global config from ProjectSettings (if not already loaded)
+	# Load global config using ConfigLoader (if not already loaded)
 	if not _global_config:
-		if not ProjectSettings.has_setting("character_creator/blender_export_path"):
-			push_error("3DCharacterCreator: ProjectSettings missing 'character_creator/blender_export_path'")
-			return
-
-		var export_path: String = ProjectSettings.get_setting("character_creator/blender_export_path")
-		var global_path := export_path.path_join("global_config.tres")
-		_global_config = load(global_path)
-
+		_global_config = ConfigLoader.load_global_config()
 		if _global_config == null:
-			push_error("Failed to load global config from: " + global_path)
 			return
 
 	# Use local_config if already loaded (shop inventory), otherwise use global
@@ -361,32 +349,14 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 			_auto_select_default(_local_config, 0, model_tree)
 
 func exit_and_save() -> void:
-	if not _session_active:
-		push_warning("exit_and_save() called but session not active")
-		return
-
-	# Hide UI and camera
-	ui.visible = false
-	camera.current = false
-	character_preview_spot.visible = false
-	done_button.visible = false
-	cancel_button.visible = false
-
-	# Emit a duplicate of the configuration (arrays are passed by reference!)
-	character_saved.emit(export_character.duplicate())
-
-	# Clear character preview meshes
-	for child: Node in character_preview_spot.get_children():
-		child.queue_free()
-
-	# Clear state
-	_clear_ui()
-	export_character.clear()
-	_session_active = false
+	_exit_session(true)
 
 func exit_and_discard() -> void:
+	_exit_session(false)
+
+func _exit_session(emit_save: bool) -> void:
 	if not _session_active:
-		push_warning("exit_and_discard() called but session not active")
+		push_warning("exit called but session not active")
 		return
 
 	# Hide UI and camera
@@ -396,14 +366,16 @@ func exit_and_discard() -> void:
 	done_button.visible = false
 	cancel_button.visible = false
 
-	# Emit cancellation signal (so interaction systems can clean up)
-	character_cancelled.emit()
+	# Conditional emission
+	if emit_save:
+		character_saved.emit(export_character.duplicate())
+	else:
+		character_cancelled.emit()
 
 	# Clear character preview meshes
-	for child: Node in character_preview_spot.get_children():
-		child.queue_free()
+	UIUtils.clear_children(character_preview_spot)
 
-	# Clear state (changes discarded)
+	# Clear state
 	_clear_ui()
 	export_character.clear()
 	_session_active = false
@@ -432,21 +404,15 @@ func _on_export_pressed() -> void:
 		push_error("No character configured to export")
 		return
 
-	# Get export path from ProjectSettings
-	if not ProjectSettings.has_setting("character_creator/blender_export_path"):
-		push_error("ProjectSettings missing 'character_creator/blender_export_path'")
+	# Get save path using ConfigLoader
+	var file_path := ConfigLoader.get_character_save_path(character_name)
+	if file_path == "":
 		return
 
-	var export_path: String = ProjectSettings.get_setting("character_creator/blender_export_path")
-	var characters_dir := export_path.path_join("characters")
-
 	# Ensure characters directory exists
+	var characters_dir := file_path.get_base_dir()
 	if not DirAccess.dir_exists_absolute(characters_dir):
 		DirAccess.make_dir_recursive_absolute(characters_dir)
-
-	# Save character config to disk
-	var file_name := character_name.to_snake_case() + ".tres"
-	var file_path := characters_dir.path_join(file_name)
 
 	# Create a LocalConfig resource and save the flat character array
 	# export_character is already flat (Array[CharacterComponent])
