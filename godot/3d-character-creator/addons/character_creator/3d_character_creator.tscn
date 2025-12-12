@@ -91,6 +91,7 @@ text = "container title"
 
 [node name="ModelList" type="ItemList" parent="UI/CCC_"]
 layout_mode = 2
+allow_search = false
 auto_width = true
 auto_height = true
 
