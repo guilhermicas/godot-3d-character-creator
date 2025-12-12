@@ -213,11 +213,12 @@ func _expand_from_selected_root(root_selection: CharacterComponent) -> void:
 			var local_match := TreeUtils.find_by_id(_local_config, child.cc_id)
 			if local_match:
 				print("  - Expanding: ", child.name, " (exists in local)")
-				_expand_ccc(child, 0, model_tree)  # Start at depth 0 since we're skipping root
+				# CRITICAL: Start at depth 1, since depth 0 is occupied by root selection (CC_male)
+				_expand_ccc(child, 1, model_tree)
 
 				# Apply defaults if needed
 				if child.is_child_mandatory and child.default_child_id != "":
-					_auto_select_default(child, 0, model_tree)
+					_auto_select_default(child, 1, model_tree)
 			else:
 				print("  - Skipping: ", child.name, " (not in local config)")
 
@@ -316,7 +317,8 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 				selected_child = child
 				selected_idx = idx
 
-	item_list.item_selected.connect(_on_item_selected.bind(depth, ccc_node, parent))
+	# Use item_clicked instead of item_selected so we can detect re-clicks for deselection
+	item_list.item_clicked.connect(_on_item_clicked.bind(depth, ccc_node, parent, component))
 
 	parent.add_child(ccc_node)
 	_active_cccs.append(ccc_node)
@@ -330,12 +332,31 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 				if child.name.begins_with("CCC_"):
 					_expand_ccc(child, depth + 1, parent)
 
-func _on_item_selected(idx: int, depth: int, ccc_node: Control, parent_container: Control) -> void:
+func _on_item_clicked(idx: int, _at_position: Vector2, mouse_button_index: int, depth: int, ccc_node: Control, parent_container: Control, parent_ccc: CharacterComponent) -> void:
+	# Only handle left clicks
+	if mouse_button_index != MOUSE_BUTTON_LEFT:
+		return
+
 	var item_list := ccc_node.get_node("ModelList") as ItemList
 	var selected := item_list.get_item_metadata(idx) as CharacterComponent
 
+	# Check if clicking already-selected item
+	var already_selected := (depth < export_character.size() and export_character[depth].cc_id == selected.cc_id)
+
+	# If already selected AND parent allows empty (not mandatory), deselect it
+	if already_selected and not parent_ccc.is_child_mandatory:
+		export_character.resize(depth) # Remove this item and all descendants from export_character
+		_clear_cccs_after(ccc_node)
+		item_list.deselect_all()
+		_update_character_preview()
+		return
+
+	# Normal selection flow
 	export_character.resize(depth + 1)
 	export_character[depth] = selected
+
+	# Select in ItemList (item_clicked doesn't auto-select)
+	item_list.select(idx)
 
 	_clear_cccs_after(ccc_node)
 	_update_character_preview()

@@ -31,7 +31,6 @@ name = "CCC_shirts"
 cc_id = "6327b5f1"
 display_name = "Awesome Shirts"
 default_child_id = "dcefb103"
-is_child_mandatory = true
 
 [sub_resource type="Resource" id="Resource_c0f4k"]
 script = ExtResource("1_3dj20")
