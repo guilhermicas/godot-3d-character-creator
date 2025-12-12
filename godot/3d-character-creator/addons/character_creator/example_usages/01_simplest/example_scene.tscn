@@ -1,9 +1,10 @@
 [gd_scene load_steps=2 format=3 uid="uid://dhl0v14olhdbc"]
 
-[ext_resource type="PackedScene" path="res://addons/character_creator/3d_character_creator.tscn" id="1_m3ij7"]
+[ext_resource type="PackedScene" uid="uid://bidgtphxxooxr" path="res://addons/character_creator/3d_character_creator.tscn" id="1_m3ij7"]
 
 [node name="ExampleScene" type="Node3D"]
 
 [node name="3DCharacterCreator" parent="." instance=ExtResource("1_m3ij7")]
 local_config_path = "res://addons/character_creator/example_usages/character_config/fancy_shop.tres"
 standalone_mode = true
+hide_definitive_base_model = false

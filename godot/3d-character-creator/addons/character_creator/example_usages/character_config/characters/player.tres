@@ -1,32 +1,15 @@
-[gd_resource type="Resource" script_class="LocalConfig" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="LocalConfig" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://addons/character_creator/resources/character_component.gd" id="1_alhuc"]
 [ext_resource type="Script" path="res://addons/character_creator/resources/local_config.gd" id="2_1lkdc"]
 
 [sub_resource type="Resource" id="Resource_alhuc"]
 script = ExtResource("1_alhuc")
-name = "CC_t_shirt"
-glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
-cc_id = "dcefb103"
-display_name = "T-Shirt"
-
-[sub_resource type="Resource" id="Resource_1lkdc"]
-script = ExtResource("1_alhuc")
-name = "CCC_shirts"
-cc_id = "6327b5f1"
-display_name = "Awesome Shirts"
-default_child_id = "dcefb103"
-is_child_mandatory = true
-children = Array[ExtResource("1_alhuc")]([SubResource("Resource_alhuc")])
-
-[sub_resource type="Resource" id="Resource_wk7xr"]
-script = ExtResource("1_alhuc")
-name = "CC_male"
-glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
-cc_id = "9efe906c"
-display_name = "Male"
-children = Array[ExtResource("1_alhuc")]([SubResource("Resource_1lkdc")])
+name = "CC_female"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
+cc_id = "57be63e5"
+display_name = "Female"
 
 [resource]
 script = ExtResource("2_1lkdc")
-items = Array[ExtResource("1_alhuc")]([SubResource("Resource_wk7xr"), SubResource("Resource_alhuc")])
+items = Array[ExtResource("1_alhuc")]([SubResource("Resource_alhuc")])

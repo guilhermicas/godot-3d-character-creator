@@ -16,6 +16,9 @@ signal character_cancelled()
 
 @export var standalone_mode: bool = false
 @export var show_cancel_button: bool = true
+## If true, skip showing the root CCC_ when character already has a selection from it.
+## Use in shops to hide base model re-selection. Safety: Always shows root if no selection exists.
+@export var hide_definitive_base_model: bool = true
 
 ## ------------------ Runtime State (not exported) ------------------
 var _global_config: CharacterComponent
@@ -145,9 +148,90 @@ func _expand_top_level() -> void:
 		export_character.clear()
 
 	_update_character_preview()
+
+	# Check if we should skip the root CCC_ (e.g., hide gender selection in shops)
+	if hide_definitive_base_model:
+
+		# First, check for mismatch: user has a root selection that doesn't exist in local config
+		var user_root_from_global := _find_user_root_in_global()
+		if user_root_from_global != null:
+
+			# Check if it exists in local config
+			var exists_in_local := false
+			for local_child in _local_config.children:
+				if local_child.cc_id == user_root_from_global.cc_id:
+					exists_in_local = true
+					break
+
+			if not exists_in_local:
+				# MISMATCH: User has CC_female but shop only has CC_male
+				_show_base_model_mismatch_message(user_root_from_global)
+				return
+			else:
+				# User's root exists in local - skip root UI and show children
+				_expand_from_selected_root(user_root_from_global)
+				return
+		else:
+			print("[Warning] User has no root selection, showing root CCC_ normally")
+
+	# Default: show root CCC_ normally (safety fallback if no root selection)
 	_expand_ccc(_local_config, 0, model_tree)
 
 ## ------------------ UI Construction ------------------
+
+## Find which root CC_ the user currently has selected (from export_character)
+## Returns the component from _global_config (with full hierarchy)
+## Returns null if user has no root selection
+func _find_user_root_in_global() -> CharacterComponent:
+	if export_character.is_empty():
+		return null
+
+	for child in _global_config.children:
+		if child.name.begins_with("CC_") and TreeUtils.is_in_flat_array(child.cc_id, export_character):
+			return child
+
+	return null
+
+## Expand UI starting from the already-selected root child (skip root CCC_)
+## Assumes root_selection has already been validated to exist in _local_config
+func _expand_from_selected_root(root_selection: CharacterComponent) -> void:
+
+	# CRITICAL: Ensure root selection is in export_character so it renders in preview
+	var already_in_export := TreeUtils.is_in_flat_array(root_selection.cc_id, export_character)
+
+	if not already_in_export:
+		var root_copy := CharacterComponent.new()
+		CharacterComponent.copy_fields(root_selection, root_copy)
+		export_character.append(root_copy)
+		_update_character_preview()  # Refresh preview with base model
+
+	# Expand children of the selected root (filter by what's in local_config)
+	for child in root_selection.children:
+		# Only expand CCC_ children that exist in the local_config
+		if child.name.begins_with("CCC_"):
+			# Check if this child exists in local config
+			var local_match := TreeUtils.find_by_id(_local_config, child.cc_id)
+			if local_match:
+				print("  - Expanding: ", child.name, " (exists in local)")
+				_expand_ccc(child, 0, model_tree)  # Start at depth 0 since we're skipping root
+
+				# Apply defaults if needed
+				if child.is_child_mandatory and child.default_child_id != "":
+					_auto_select_default(child, 0, model_tree)
+			else:
+				print("  - Skipping: ", child.name, " (not in local config)")
+
+## Show message when user's base model doesn't match the current config
+func _show_base_model_mismatch_message(user_selection: CharacterComponent) -> void:
+	var message := Label.new()
+	var base_model_name := user_selection.display_name if user_selection.display_name else user_selection.name
+	message.text = "This location doesn't have items for your current base model (%s).\nPlease visit a different location." % base_model_name
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	message.add_theme_font_size_override("font_size", 16)
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message.custom_minimum_size = Vector2(400, 100)
+	model_tree.add_child(message)
 
 func _is_in_export_character(cc_id: String) -> bool:
 	return TreeUtils.is_in_flat_array(cc_id, export_character)
