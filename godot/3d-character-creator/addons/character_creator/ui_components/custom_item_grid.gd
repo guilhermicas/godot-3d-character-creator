@@ -17,9 +17,11 @@ signal item_clicked(idx: int, at_position: Vector2, mouse_button_index: int)
 		icon_size = value
 		_update_icon_sizes()
 
+@export var allow_multi_select: bool = false  ## Allow selecting multiple items
+
 var _grid_item_scene: PackedScene
 var _items: Array[GridItem] = []
-var _selected_index: int = -1
+var _selected_indices: Array[int] = []  # Supports multi-selection
 var _inner_container: Container  # GridContainer or HFlowContainer for multi-column
 
 func _ready() -> void:
@@ -51,23 +53,46 @@ func clear() -> void:
 		if item and is_instance_valid(item):
 			item.queue_free()
 	_items.clear()
-	_selected_index = -1
+	_selected_indices.clear()
 
 func select(idx: int) -> void:
 	if idx < 0 or idx >= _items.size():
 		return
 
-	# Deselect previous
-	if _selected_index >= 0 and _selected_index < _items.size():
-		_items[_selected_index].is_selected = false
+	if allow_multi_select:
+		# Multi-select: toggle selection
+		if idx in _selected_indices:
+			return  # Already selected, don't re-add
+		_selected_indices.append(idx)
+		_items[idx].is_selected = true
+	else:
+		# Single select: deselect previous, select new
+		for sel_idx in _selected_indices:
+			if sel_idx >= 0 and sel_idx < _items.size():
+				_items[sel_idx].is_selected = false
+		_selected_indices.clear()
+		_selected_indices.append(idx)
+		_items[idx].is_selected = true
 
-	_selected_index = idx
-	_items[idx].is_selected = true
+func deselect(idx: int) -> void:
+	"""Deselect a specific item by index"""
+	if idx < 0 or idx >= _items.size():
+		return
+
+	var pos := _selected_indices.find(idx)
+	if pos >= 0:
+		_selected_indices.remove_at(pos)
+		_items[idx].is_selected = false
 
 func deselect_all() -> void:
-	if _selected_index >= 0 and _selected_index < _items.size():
-		_items[_selected_index].is_selected = false
-	_selected_index = -1
+	for sel_idx in _selected_indices:
+		if sel_idx >= 0 and sel_idx < _items.size():
+			_items[sel_idx].is_selected = false
+	_selected_indices.clear()
+
+func is_selected(idx: int) -> bool:
+	"""Check if an item is currently selected"""
+	return idx in _selected_indices
 
 func get_item_metadata(idx: int) -> Variant:
 	if idx < 0 or idx >= _items.size():
@@ -86,9 +111,10 @@ func set_item_loading(idx: int, loading: bool) -> void:
 	_items[idx].is_loading = loading
 
 func get_selected_items() -> PackedInt32Array:
-	if _selected_index >= 0:
-		return PackedInt32Array([_selected_index])
-	return PackedInt32Array()
+	var result := PackedInt32Array()
+	for idx in _selected_indices:
+		result.append(idx)
+	return result
 
 func _on_grid_item_clicked(item: GridItem, idx: int) -> void:
 	var mouse_pos: Vector2 = item.get_local_mouse_position()

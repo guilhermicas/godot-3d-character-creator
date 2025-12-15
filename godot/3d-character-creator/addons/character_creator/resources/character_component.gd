@@ -48,6 +48,7 @@ class_name CharacterComponent
 @export_group("Defaults & Mandatory (CCC_ only)")
 @export var default_child_id: String = ""  ## Which CC_ child to auto-select
 @export var is_child_mandatory: bool = false  ## Must have ≥1 child selected
+@export var allow_multiple_selection: bool = false  ## Allow selecting multiple siblings (e.g., rings)
 
 # Hierarchy
 @export var children: Array[CharacterComponent] = []
@@ -57,7 +58,7 @@ var instanced_model: PackedScene = null  # Not exported, transient runtime data
 ## Get list of fields that should be serialized (flat storage)
 static func get_serialized_fields() -> Array[String]:
 	return ["cc_id", "name", "glb_path", "display_name", "metadata",
-			"default_child_id", "is_child_mandatory"]
+			"default_child_id", "is_child_mandatory", "allow_multiple_selection"]
 
 ## Copy serialized fields from source to destination
 static func copy_fields(from: CharacterComponent, to: CharacterComponent) -> void:
@@ -68,6 +69,7 @@ static func copy_fields(from: CharacterComponent, to: CharacterComponent) -> voi
 	to.metadata = from.metadata.duplicate()
 	to.default_child_id = from.default_child_id
 	to.is_child_mandatory = from.is_child_mandatory
+	to.allow_multiple_selection = from.allow_multiple_selection
 	# NOTE: children and instanced_model are NOT copied (transient/reconstructed)
 
 ## Validates and auto-fixes defaults & mandatory flags
@@ -138,10 +140,11 @@ static func _assemble_recursive(
 			result.display_name = override.display_name
 		if not override.metadata.is_empty():
 			result.metadata = override.metadata.duplicate()
-		# Override defaults/mandatory if set in local config
+		# Override defaults/mandatory/multi-select if set in local config
 		if override.default_child_id != "":
 			result.default_child_id = override.default_child_id
 		result.is_child_mandatory = override.is_child_mandatory
+		result.allow_multiple_selection = override.allow_multiple_selection
 
 	# Recursively process children
 	for child in source.children:

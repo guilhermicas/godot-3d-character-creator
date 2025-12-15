@@ -319,9 +319,11 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	# Configure grid settings from export vars
 	item_grid.columns = grid_columns
 	item_grid.icon_size = item_icon_size
+	item_grid.allow_multi_select = component.allow_multiple_selection
 
-	var selected_child: CharacterComponent = null
-	var selected_idx := -1
+	# Track pre-selected items (supports multi-select)
+	var selected_children: Array[CharacterComponent] = []
+	var selected_indices: Array[int] = []
 
 	for child in component.children:
 		if child.name.begins_with("CC_"):
@@ -345,8 +347,8 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 
 			# Check if this item should be pre-selected
 			if _is_in_export_character(child.cc_id):
-				selected_child = child
-				selected_idx = idx
+				selected_children.append(child)
+				selected_indices.append(idx)
 
 	# Connect signal - item_clicked fires for every click including re-clicks
 	item_grid.item_clicked.connect(_on_item_clicked.bind(depth, ccc_node, parent, component))
@@ -354,11 +356,16 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	parent.add_child(ccc_node)
 	_active_cccs.append(ccc_node)
 
-	# Pre-select item if found in export_character
-	if selected_idx >= 0:
-		item_grid.select(selected_idx)
-		# Auto-expand children if this item has descendants in export_character (add to ccc_node)
-		if selected_child and _has_descendant_in_export(selected_child):
+	# Pre-select items found in export_character
+	for i in range(selected_indices.size()):
+		item_grid.select(selected_indices[i])
+
+	# Auto-expand children for selected items that have descendants in export_character
+	# For multi-select containers, we don't expand child CCCs (rings don't have sub-containers typically)
+	# For single-select containers, expand as before
+	if not component.allow_multiple_selection and selected_children.size() > 0:
+		var selected_child := selected_children[0]
+		if _has_descendant_in_export(selected_child):
 			for child in selected_child.children:
 				if child.name.begins_with("CCC_"):
 					_expand_ccc(child, depth + 1, ccc_node)
@@ -369,37 +376,93 @@ func _on_item_clicked(idx: int, _at_position: Vector2, mouse_button_index: int, 
 		return
 
 	var item_grid := ccc_node.get_node("ModelList")  # CustomItemGrid
-	var selected := item_grid.get_item_metadata(idx) as CharacterComponent
+	var clicked := item_grid.get_item_metadata(idx) as CharacterComponent
+	var already_selected := _is_in_export_character(clicked.cc_id)
 
-	# Check if clicking already-selected item
-	var already_selected := (depth < export_character.size() and export_character[depth].cc_id == selected.cc_id)
+	# Handle multi-select containers (e.g., rings)
+	if parent_ccc.allow_multiple_selection:
+		_handle_multi_select_click(idx, clicked, already_selected, parent_ccc, item_grid)
+		return
 
-	# If already selected AND parent allows empty (not mandatory), deselect it
+	# Handle single-select containers (default behavior)
+	_handle_single_select_click(idx, clicked, already_selected, depth, ccc_node, parent_ccc, item_grid)
+
+func _handle_multi_select_click(idx: int, clicked: CharacterComponent, already_selected: bool, parent_ccc: CharacterComponent, item_grid: Control) -> void:
+	"""Handle click in a multi-select container (toggle selection)"""
+	if already_selected:
+		# Check if we can deselect (mandatory requires at least one)
+		if parent_ccc.is_child_mandatory:
+			# Count how many siblings are currently selected
+			var sibling_count := 0
+			for comp in export_character:
+				for child in parent_ccc.children:
+					if child.cc_id == comp.cc_id:
+						sibling_count += 1
+						break
+			# Can't deselect if it's the last one
+			if sibling_count <= 1:
+				return
+
+		# Deselect: remove from export_character
+		_remove_from_export_character(clicked.cc_id)
+		item_grid.deselect(idx)
+	else:
+		# Select: add to export_character
+		var copy := CharacterComponent.new()
+		CharacterComponent.copy_fields(clicked, copy)
+		export_character.append(copy)
+		item_grid.select(idx)
+
+	_update_character_preview()
+
+func _handle_single_select_click(idx: int, clicked: CharacterComponent, already_selected: bool, depth: int, ccc_node: Control, parent_ccc: CharacterComponent, item_grid: Control) -> void:
+	"""Handle click in a single-select container (replace selection)"""
+	# If clicking already-selected item AND parent allows empty, deselect it
 	if already_selected and not parent_ccc.is_child_mandatory:
-		export_character.resize(depth)  # Remove this item and all descendants
+		# Remove this item and all items at greater depths from the same branch
+		_remove_branch_from_depth(depth)
 		_clear_cccs_after(ccc_node)
 		item_grid.deselect_all()
 		_update_character_preview()
 		return
 
-	# Normal selection flow
-	export_character.resize(depth + 1)
-	export_character[depth] = selected
+	# Normal selection: replace any previous selection at this depth
+	_remove_branch_from_depth(depth)
 
-	# Select in grid (item_clicked doesn't auto-select)
+	# Add clicked item to export_character
+	var copy := CharacterComponent.new()
+	CharacterComponent.copy_fields(clicked, copy)
+	export_character.append(copy)
+
+	# Select in grid
 	item_grid.select(idx)
 
 	_clear_cccs_after(ccc_node)
 	_update_character_preview()
 
 	# Expand child containers (add them as children of current ccc_node)
-	for child in selected.children:
+	for child in clicked.children:
 		if child.name.begins_with("CCC_"):
 			_expand_ccc(child, depth + 1, ccc_node)
 
 			# If this child is mandatory, auto-select its default
 			if child.is_child_mandatory and child.default_child_id != "":
 				_auto_select_default(child, depth + 1, ccc_node)
+
+func _remove_from_export_character(cc_id: String) -> void:
+	"""Remove a component from export_character by cc_id"""
+	for i in range(export_character.size() - 1, -1, -1):
+		if export_character[i].cc_id == cc_id:
+			export_character.remove_at(i)
+			return
+
+func _remove_branch_from_depth(depth: int) -> void:
+	"""Remove items at depth and deeper from the current selection branch.
+	This handles the old depth-based logic for single-select containers."""
+	# For now, we truncate to simulate the old behavior
+	# This is a simplification - in a full tree structure we'd need to track branches
+	if depth < export_character.size():
+		export_character.resize(depth)
 
 func _clear_cccs_after(from_node: Control) -> void:
 	var idx := _active_cccs.find(from_node)

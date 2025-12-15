@@ -150,7 +150,7 @@ func _show_properties(component: CharacterComponent) -> void:
 		properties_panel.add_child(HSeparator.new())
 
 		var defaults_label := Label.new()
-		defaults_label.text = "Defaults & Mandatory (CCC_ only)"
+		defaults_label.text = "Selection Options (CCC_ only)"
 		defaults_label.add_theme_font_size_override("font_size", 14)
 		properties_panel.add_child(defaults_label)
 
@@ -158,6 +158,7 @@ func _show_properties(component: CharacterComponent) -> void:
 		var mandatory_container := HBoxContainer.new()
 		var mandatory_check := CheckBox.new()
 		mandatory_check.text = "Is Child Mandatory"
+		mandatory_check.tooltip_text = "Requires at least one child to be selected"
 		mandatory_check.button_pressed = component.is_child_mandatory
 		mandatory_check.toggled.connect(func(pressed: bool):
 			component.is_child_mandatory = pressed
@@ -167,6 +168,20 @@ func _show_properties(component: CharacterComponent) -> void:
 		)
 		mandatory_container.add_child(mandatory_check)
 		properties_panel.add_child(mandatory_container)
+
+		# Multi-select checkbox
+		var multi_container := HBoxContainer.new()
+		var multi_check := CheckBox.new()
+		multi_check.text = "Allow Multiple Selection"
+		multi_check.tooltip_text = "Allow selecting multiple items (e.g., rings, accessories)"
+		multi_check.button_pressed = component.allow_multiple_selection
+		multi_check.toggled.connect(func(pressed: bool):
+			component.allow_multiple_selection = pressed
+			property_changed.emit(component, "allow_multiple_selection", pressed)
+			_rebuild_tree()
+		)
+		multi_container.add_child(multi_check)
+		properties_panel.add_child(multi_container)
 
 		# Default child dropdown
 		var default_container := HBoxContainer.new()
