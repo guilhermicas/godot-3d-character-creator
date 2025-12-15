@@ -34,12 +34,13 @@ func _ready() -> void:
 	_update_loading_state()
 	_update_visual_state()
 
-func setup(comp: CharacterComponent, icon: Texture2D, icon_size: Vector2i) -> void:
+func setup(comp: CharacterComponent, icon: Texture2D, icon_size: Vector2i, custom_loading: Resource = null) -> void:
 	component = comp
 
 	# Get references manually (node might not be ready yet, so @onready vars are null)
 	var tex_rect := get_node_or_null("VBox/TextureRect") as TextureRect
 	var lbl := get_node_or_null("VBox/Label") as Label
+	var load_ind := get_node_or_null("VBox/TextureRect/LoadingIndicator") as ColorRect
 
 	if tex_rect:
 		tex_rect.texture = icon
@@ -52,6 +53,28 @@ func setup(comp: CharacterComponent, icon: Texture2D, icon_size: Vector2i) -> vo
 		lbl.text = display
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
+	# Apply custom loading indicator if provided
+	if load_ind and custom_loading:
+		if custom_loading is Shader:
+			var mat := ShaderMaterial.new()
+			mat.shader = custom_loading
+			load_ind.material = mat
+		elif custom_loading is Texture2D:
+			# For textures, use a TextureRect instead of ColorRect with shader
+			# We'll overlay a texture by setting the color to white and using a texture
+			load_ind.material = null
+			load_ind.color = Color.WHITE
+			# Create a child TextureRect for the texture
+			var tex_child := load_ind.get_node_or_null("LoadingTexture") as TextureRect
+			if not tex_child:
+				tex_child = TextureRect.new()
+				tex_child.name = "LoadingTexture"
+				tex_child.set_anchors_preset(Control.PRESET_FULL_RECT)
+				tex_child.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				tex_child.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				load_ind.add_child(tex_child)
+			tex_child.texture = custom_loading
 
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:

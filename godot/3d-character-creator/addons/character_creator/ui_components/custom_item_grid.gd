@@ -19,6 +19,9 @@ signal item_clicked(idx: int, at_position: Vector2, mouse_button_index: int)
 
 @export var allow_multi_select: bool = false  ## Allow selecting multiple items
 
+## Custom loading indicator (Shader or Texture2D) - passed to GridItems
+var custom_loading_indicator: Resource
+
 var _grid_item_scene: PackedScene
 var _items: Array[GridItem] = []
 var _selected_indices: Array[int] = []  # Supports multi-selection
@@ -37,7 +40,7 @@ func add_item(text: String, icon: Texture2D, metadata: Variant = null) -> int:
 		_ensure_container_exists()
 
 	var item: GridItem = _grid_item_scene.instantiate()
-	item.setup(metadata, icon, icon_size)
+	item.setup(metadata, icon, icon_size, custom_loading_indicator)
 	item.item_clicked.connect(_on_grid_item_clicked.bind(_items.size()))
 	item.settings_clicked.connect(_on_grid_item_settings_clicked.bind(_items.size()))
 

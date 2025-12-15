@@ -32,8 +32,9 @@ signal character_cancelled()
 @export var item_icon_size: Vector2i = Vector2i(64, 64)
 
 @export_group("Loading")
-## Show custom loading texture/shader instead of default spinner
-@export var custom_loading_texture: Texture2D
+## Custom loading indicator - accepts Shader (.gdshader) or Texture2D
+## Shaders are recommended for animated spinners. Falls back to built-in spinner if not set.
+@export var custom_loading_indicator: Resource  # Shader or Texture2D
 
 ## ------------------ Runtime State (not exported) ------------------
 var _global_config: CharacterComponent
@@ -320,6 +321,7 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 	item_grid.columns = grid_columns
 	item_grid.icon_size = item_icon_size
 	item_grid.allow_multi_select = component.allow_multiple_selection
+	item_grid.custom_loading_indicator = custom_loading_indicator
 
 	# Track pre-selected items (supports multi-select)
 	var selected_children: Array[CharacterComponent] = []
