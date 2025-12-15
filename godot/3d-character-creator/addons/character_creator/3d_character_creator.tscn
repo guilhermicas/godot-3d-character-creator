@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bidgtphxxooxr"]
+[gd_scene load_steps=7 format=3 uid="uid://bidgtphxxooxr"]
 
 [ext_resource type="Script" uid="uid://b8royuvd6ux4w" path="res://addons/character_creator/resources/3d_character_creator.gd" id="1_wih4m"]
+[ext_resource type="PackedScene" uid="uid://dqk8hy7mxw2pa" path="res://addons/character_creator/ui_components/custom_item_grid.tscn" id="2_custom_grid"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_aki0f"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -79,21 +80,14 @@ text = "Cancel"
 
 [node name="CCC_" type="VBoxContainer" parent="UI"]
 visible = false
-layout_mode = 0
-offset_left = 15.0
-offset_top = 15.0
-offset_right = 561.0
-offset_bottom = 42.0
+layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="UI/CCC_"]
 layout_mode = 2
 text = "container title"
 
-[node name="ModelList" type="ItemList" parent="UI/CCC_"]
+[node name="ModelList" parent="UI/CCC_" instance=ExtResource("2_custom_grid")]
 layout_mode = 2
-allow_search = false
-auto_width = true
-auto_height = true
 
 [node name="HBoxContainer" type="HBoxContainer" parent="UI"]
 layout_mode = 1

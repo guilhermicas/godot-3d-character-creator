@@ -1,0 +1,65 @@
+[gd_scene load_steps=4 format=3 uid="uid://bv8qkjxm2ypfs"]
+
+[ext_resource type="Script" path="res://addons/character_creator/ui_components/grid_item.gd" id="1_grid_item"]
+[ext_resource type="Shader" path="res://addons/character_creator/ui_components/loading_spinner.gdshader" id="2_spinner"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_spinner"]
+shader = ExtResource("2_spinner")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.15, 0.15, 0.15, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="GridItem" type="PanelContainer"]
+custom_minimum_size = Vector2(64, 80)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_grid_item")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="VBox"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SettingsButton" type="Button" parent="VBox/TextureRect"]
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -24.0
+offset_top = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "⚙"
+
+[node name="LoadingIndicator" type="ColorRect" parent="VBox/TextureRect"]
+visible = false
+material = SubResource("ShaderMaterial_spinner")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Label" type="Label" parent="VBox"]
+custom_minimum_size = Vector2(64, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Item Name"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+clip_text = true

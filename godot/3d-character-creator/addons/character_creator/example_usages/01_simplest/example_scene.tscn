@@ -8,3 +8,5 @@
 local_config_path = "res://addons/character_creator/example_usages/character_config/fancy_shop.tres"
 standalone_mode = true
 hide_definitive_base_model = false
+grid_columns = 10
+item_icon_size = Vector2i(128, 128)

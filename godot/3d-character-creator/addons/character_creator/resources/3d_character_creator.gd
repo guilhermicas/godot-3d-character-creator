@@ -20,6 +20,21 @@ signal character_cancelled()
 ## Use in shops to hide base model re-selection. Safety: Always shows root if no selection exists.
 @export var hide_definitive_base_model: bool = true
 
+## ------------------ UI Configuration ------------------
+@export_group("UI Theme")
+## Optional UI theme (uses default Godot theme if null)
+@export var ui_theme: Theme
+
+@export_group("Item Grid")
+## Number of columns in grid layout (1 = single column list)
+@export_range(1, 10) var grid_columns: int = 1
+## Icon/image size for each item
+@export var item_icon_size: Vector2i = Vector2i(64, 64)
+
+@export_group("Loading")
+## Show custom loading texture/shader instead of default spinner
+@export var custom_loading_texture: Texture2D
+
 ## ------------------ Runtime State (not exported) ------------------
 var _global_config: CharacterComponent
 var _local_config: CharacterComponent
@@ -49,6 +64,10 @@ const DEPTH_DARKENING_FACTOR := 0.15
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
+		# Apply UI theme if provided
+		if ui_theme:
+			ui.theme = ui_theme
+
 		_create_placeholder_icon()
 		ccc_ref.visible = false
 		character_preview_spot.visible = false
@@ -87,13 +106,19 @@ func _poll_loading_items() -> void:
 
 			if _item_list_map.has(cc_id):
 				var data: Dictionary = _item_list_map[cc_id]
-				var item_list := data.list as ItemList
+				var item_grid: Control = data.list  # CustomItemGrid
 				var idx: int = data.idx
-				var display := comp.display_name if comp.display_name else comp.name
-				item_list.set_item_text(idx, display)
+				# Hide loading spinner, show loaded item
+				item_grid.set_item_loading(idx, false)
 		elif status == ResourceLoader.THREAD_LOAD_FAILED:
 			push_error("Failed to load GLB: " + comp.glb_path)
 			_loading_items.erase(cc_id)
+
+			# Hide loading spinner on failure too
+			if _item_list_map.has(cc_id):
+				var data: Dictionary = _item_list_map[cc_id]
+				var item_grid: Control = data.list
+				item_grid.set_item_loading(data.idx, false)
 
 func _create_placeholder_icon() -> void:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGB8)
@@ -171,8 +196,6 @@ func _expand_top_level() -> void:
 				# User's root exists in local - skip root UI and show children
 				_expand_from_selected_root(user_root_from_global)
 				return
-		else:
-			print("[Warning] User has no root selection, showing root CCC_ normally")
 
 	# Default: show root CCC_ normally (safety fallback if no root selection)
 	_expand_ccc(_local_config, 0, model_tree)
@@ -212,15 +235,12 @@ func _expand_from_selected_root(root_selection: CharacterComponent) -> void:
 			# Check if this child exists in local config
 			var local_match := TreeUtils.find_by_id(_local_config, child.cc_id)
 			if local_match:
-				print("  - Expanding: ", child.name, " (exists in local)")
 				# CRITICAL: Start at depth 1, since depth 0 is occupied by root selection (CC_male)
 				_expand_ccc(child, 1, model_tree)
 
 				# Apply defaults if needed
 				if child.is_child_mandatory and child.default_child_id != "":
 					_auto_select_default(child, 1, model_tree)
-			else:
-				print("  - Skipping: ", child.name, " (not in local config)")
 
 ## Show message when user's base model doesn't match the current config
 func _show_base_model_mismatch_message(user_selection: CharacterComponent) -> void:
@@ -263,14 +283,14 @@ func _auto_select_default(container: CharacterComponent, depth: int, parent_cont
 		export_character.resize(depth + 1)
 	export_character[depth] = default_child
 
-	# Find and select in the ItemList that was just created for this container
+	# Find and select in the CustomItemGrid that was just created for this container
 	for ccc in _active_cccs:
-		var item_list := ccc.get_node_or_null("ModelList") as ItemList
-		if item_list:
-			for i in range(item_list.item_count):
-				var item_meta = item_list.get_item_metadata(i) as CharacterComponent
+		var item_grid := ccc.get_node_or_null("ModelList")  # CustomItemGrid
+		if item_grid:
+			for i in range(item_grid._items.size()):
+				var item_meta = item_grid.get_item_metadata(i) as CharacterComponent
 				if item_meta and item_meta.cc_id == default_child.cc_id:
-					item_list.select(i)
+					item_grid.select(i)
 					break
 
 	# Update preview
@@ -286,12 +306,19 @@ func _auto_select_default(container: CharacterComponent, depth: int, parent_cont
 func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> void:
 	var ccc_node := ccc_ref.duplicate() as VBoxContainer
 	ccc_node.visible = true
+	# Ensure container-based layout for proper stacking
+	ccc_node.set("layout_mode", 2)
+	ccc_node.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	var title_label := ccc_node.get_node("TitleLabel") as Label
-	var item_list := ccc_node.get_node("ModelList") as ItemList
+	var item_grid := ccc_node.get_node("ModelList")  # CustomItemGrid
 
 	title_label.text = component.display_name if component.display_name else component.name
 	ccc_node.modulate = Color.from_hsv(0, 0, 1.0 - (depth * DEPTH_DARKENING_FACTOR))
+
+	# Configure grid settings from export vars
+	item_grid.columns = grid_columns
+	item_grid.icon_size = item_icon_size
 
 	var selected_child: CharacterComponent = null
 	var selected_idx := -1
@@ -301,53 +328,57 @@ func _expand_ccc(component: CharacterComponent, depth: int, parent: Control) -> 
 			var display := child.display_name if child.display_name else child.name
 
 			var cached := GLBCache.get_cached(child.cc_id)
+			var is_loading := false
 			if cached:
 				child.instanced_model = cached
 			elif child.glb_path != "" and not _loading_items.has(child.cc_id):
-				display += " [Loading...]"
+				is_loading = true
 				ResourceLoader.load_threaded_request(child.glb_path)
 				_loading_items[child.cc_id] = child
 
-			var idx := item_list.add_item(display, _placeholder_icon)
-			item_list.set_item_metadata(idx, child)
-			_item_list_map[child.cc_id] = {"list": item_list, "idx": idx}
+			var idx: int = item_grid.add_item(display, _placeholder_icon, child)
+			_item_list_map[child.cc_id] = {"list": item_grid, "idx": idx}
+
+			# Set loading state if needed
+			if is_loading:
+				item_grid.set_item_loading(idx, true)
 
 			# Check if this item should be pre-selected
 			if _is_in_export_character(child.cc_id):
 				selected_child = child
 				selected_idx = idx
 
-	# Use item_clicked instead of item_selected so we can detect re-clicks for deselection
-	item_list.item_clicked.connect(_on_item_clicked.bind(depth, ccc_node, parent, component))
+	# Connect signal - item_clicked fires for every click including re-clicks
+	item_grid.item_clicked.connect(_on_item_clicked.bind(depth, ccc_node, parent, component))
 
 	parent.add_child(ccc_node)
 	_active_cccs.append(ccc_node)
 
 	# Pre-select item if found in export_character
 	if selected_idx >= 0:
-		item_list.select(selected_idx)
-		# Auto-expand children if this item has descendants in export_character
+		item_grid.select(selected_idx)
+		# Auto-expand children if this item has descendants in export_character (add to ccc_node)
 		if selected_child and _has_descendant_in_export(selected_child):
 			for child in selected_child.children:
 				if child.name.begins_with("CCC_"):
-					_expand_ccc(child, depth + 1, parent)
+					_expand_ccc(child, depth + 1, ccc_node)
 
 func _on_item_clicked(idx: int, _at_position: Vector2, mouse_button_index: int, depth: int, ccc_node: Control, parent_container: Control, parent_ccc: CharacterComponent) -> void:
 	# Only handle left clicks
 	if mouse_button_index != MOUSE_BUTTON_LEFT:
 		return
 
-	var item_list := ccc_node.get_node("ModelList") as ItemList
-	var selected := item_list.get_item_metadata(idx) as CharacterComponent
+	var item_grid := ccc_node.get_node("ModelList")  # CustomItemGrid
+	var selected := item_grid.get_item_metadata(idx) as CharacterComponent
 
 	# Check if clicking already-selected item
 	var already_selected := (depth < export_character.size() and export_character[depth].cc_id == selected.cc_id)
 
 	# If already selected AND parent allows empty (not mandatory), deselect it
 	if already_selected and not parent_ccc.is_child_mandatory:
-		export_character.resize(depth) # Remove this item and all descendants from export_character
+		export_character.resize(depth)  # Remove this item and all descendants
 		_clear_cccs_after(ccc_node)
-		item_list.deselect_all()
+		item_grid.deselect_all()
 		_update_character_preview()
 		return
 
@@ -355,20 +386,20 @@ func _on_item_clicked(idx: int, _at_position: Vector2, mouse_button_index: int, 
 	export_character.resize(depth + 1)
 	export_character[depth] = selected
 
-	# Select in ItemList (item_clicked doesn't auto-select)
-	item_list.select(idx)
+	# Select in grid (item_clicked doesn't auto-select)
+	item_grid.select(idx)
 
 	_clear_cccs_after(ccc_node)
 	_update_character_preview()
 
-	# Expand child containers
+	# Expand child containers (add them as children of current ccc_node)
 	for child in selected.children:
 		if child.name.begins_with("CCC_"):
-			_expand_ccc(child, depth + 1, parent_container)
+			_expand_ccc(child, depth + 1, ccc_node)
 
 			# If this child is mandatory, auto-select its default
 			if child.is_child_mandatory and child.default_child_id != "":
-				_auto_select_default(child, depth + 1, parent_container)
+				_auto_select_default(child, depth + 1, ccc_node)
 
 func _clear_cccs_after(from_node: Control) -> void:
 	var idx := _active_cccs.find(from_node)
