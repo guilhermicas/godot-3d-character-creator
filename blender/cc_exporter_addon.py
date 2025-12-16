@@ -161,9 +161,9 @@ class CC_OT_export(Operator):
             if target.exists():
                 try:
                     from shutil import rmtree
-                    # This prevents removal of global_config, or other potential config files
+                    # Only delete CC_/CCC_ folders - preserve characters/, config files, etc.
                     for item in target.iterdir():
-                        if item.is_dir():
+                        if item.is_dir() and (item.name.startswith("CCC_") or item.name.startswith("CC_")):
                             rmtree(item)
                 except Exception as e:
                     self.report({'ERROR'}, f"Failed to delete destination: {e}")

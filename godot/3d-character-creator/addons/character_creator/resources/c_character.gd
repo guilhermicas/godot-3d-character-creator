@@ -61,18 +61,40 @@ func _load_character() -> void:
 		_flat_config = []
 		character_loaded.emit()
 		return
-	
+
 	var local_res: LocalConfig = load(_character_save_path)
 	if local_res == null:
 		push_error("CCharacter: Failed to load character from: " + _character_save_path)
 		_flat_config = []
 		character_loaded.emit()
 		return
-	
-	_flat_config = local_res.items
+
+	# Validate: rebuild hierarchy from saved cc_ids, then flatten back
+	# This filters out orphaned components (e.g., shirt saved under female but now under male)
+	var saved_ids: Dictionary = {}
+	for comp in local_res.items:
+		saved_ids[comp.cc_id] = true
+
+	var assembled := CharacterComponent.assemble_from_global(local_res.items, _global_config)
+	_flat_config = _flatten_assembled(assembled)
+
 	_rebuild_used_ids_cache()
-	print("CCharacter: Loaded character from " + _character_save_path)
+	print("CCharacter: Loaded ", _flat_config.size(), " components from " + _character_save_path)
 	character_loaded.emit()
+
+func _flatten_assembled(root: CharacterComponent) -> Array[CharacterComponent]:
+	## Flatten assembled hierarchy back to flat array (only CC_ components with glb_path)
+	var result: Array[CharacterComponent] = []
+	_flatten_recursive(root, result)
+	return result
+
+func _flatten_recursive(comp: CharacterComponent, result: Array[CharacterComponent]) -> void:
+	if comp.glb_path != "":
+		var copy := CharacterComponent.new()
+		CharacterComponent.copy_fields(comp, copy)
+		result.append(copy)
+	for child in comp.children:
+		_flatten_recursive(child, result)
 
 func _save_to_disk() -> void:
 	# Ensure characters directory exists

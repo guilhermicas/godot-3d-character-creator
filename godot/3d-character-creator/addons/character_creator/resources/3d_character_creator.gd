@@ -525,12 +525,10 @@ func enter_with_character(input_config: Array[CharacterComponent]) -> void:
 	for warning in validation_warnings:
 		push_warning("Config validation: " + warning)
 
-	# Initialize export_character
+	# Initialize export_character (CCharacter validates on load, so input is already clean)
 	if input_config.is_empty():
-		# New character: Apply top-level defaults
 		export_character.clear()
 	else:
-		# Existing character: Pre-populate with current selections
 		export_character = input_config.duplicate()
 
 	# Show UI, camera, Done button, and optionally Cancel button
