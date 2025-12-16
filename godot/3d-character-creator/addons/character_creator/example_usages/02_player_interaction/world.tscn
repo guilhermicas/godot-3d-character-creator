@@ -55,3 +55,5 @@ size = Vector3(2, 2, 2)
 [node name="CharacterCreator" parent="Store" instance=ExtResource("2_creator")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
 local_config_path = "uid://ds47qbbdhgua1"
+grid_columns = 10
+item_icon_size = Vector2i(128, 128)

@@ -1,6 +1,25 @@
-[gd_resource type="Resource" script_class="CharacterComponent" load_steps=6 format=3 uid="uid://cptm1sxc8hqbv"]
+[gd_resource type="Resource" script_class="CharacterComponent" load_steps=9 format=3 uid="uid://cptm1sxc8hqbv"]
 
 [ext_resource type="Script" uid="uid://dslyss3be62i6" path="res://addons/character_creator/resources/character_component.gd" id="1_sfhlp"]
+
+[sub_resource type="Resource" id="Resource_6dv2v"]
+script = ExtResource("1_sfhlp")
+name = "CC_index_ring"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_rings_CC_id_de027603/CC_index_ring_CC_id_589944fa/CC_index_ring.glb"
+cc_id = "589944fa"
+
+[sub_resource type="Resource" id="Resource_p6aff"]
+script = ExtResource("1_sfhlp")
+name = "CC_thumb_ring"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_rings_CC_id_de027603/CC_thumb_ring_CC_id_d9e8635c/CC_thumb_ring.glb"
+cc_id = "d9e8635c"
+
+[sub_resource type="Resource" id="Resource_3bafc"]
+script = ExtResource("1_sfhlp")
+name = "CCC_rings"
+cc_id = "de027603"
+allow_multiple_selection = true
+children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_6dv2v"), SubResource("Resource_p6aff")])
 
 [sub_resource type="Resource" id="Resource_sfhlp"]
 script = ExtResource("1_sfhlp")
@@ -8,6 +27,7 @@ name = "CC_female"
 glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
 cc_id = "57be63e5"
 display_name = "Female"
+children = Array[ExtResource("1_sfhlp")]([SubResource("Resource_3bafc")])
 
 [sub_resource type="Resource" id="Resource_62hux"]
 script = ExtResource("1_sfhlp")

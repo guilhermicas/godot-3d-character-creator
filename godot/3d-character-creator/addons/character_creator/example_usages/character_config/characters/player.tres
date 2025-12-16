@@ -3,20 +3,19 @@
 [ext_resource type="Script" path="res://addons/character_creator/resources/character_component.gd" id="1_alhuc"]
 [ext_resource type="Script" path="res://addons/character_creator/resources/local_config.gd" id="2_1lkdc"]
 
-[sub_resource type="Resource" id="Resource_wk7xr"]
+[sub_resource type="Resource" id="Resource_alhuc"]
 script = ExtResource("1_alhuc")
 name = "CC_female"
 glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CC_female.glb"
 cc_id = "57be63e5"
 display_name = "Female"
 
-[sub_resource type="Resource" id="Resource_b0o0w"]
+[sub_resource type="Resource" id="Resource_1lkdc"]
 script = ExtResource("1_alhuc")
-name = "CC_t_shirt"
-glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
-cc_id = "dcefb103"
-display_name = "T-Shirt"
+name = "CC_thumb_ring"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_rings_CC_id_de027603/CC_thumb_ring_CC_id_d9e8635c/CC_thumb_ring.glb"
+cc_id = "d9e8635c"
 
 [resource]
 script = ExtResource("2_1lkdc")
-items = Array[ExtResource("1_alhuc")]([SubResource("Resource_wk7xr"), SubResource("Resource_b0o0w")])
+items = Array[ExtResource("1_alhuc")]([SubResource("Resource_alhuc"), SubResource("Resource_1lkdc")])

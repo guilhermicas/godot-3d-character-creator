@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LocalConfig" load_steps=8 format=3 uid="uid://ds47qbbdhgua1"]
+[gd_resource type="Resource" script_class="LocalConfig" load_steps=11 format=3 uid="uid://ds47qbbdhgua1"]
 
 [ext_resource type="Script" uid="uid://dslyss3be62i6" path="res://addons/character_creator/resources/character_component.gd" id="1_3dj20"]
 [ext_resource type="Script" uid="uid://pt2dwfsq0fvx" path="res://addons/character_creator/resources/local_config.gd" id="2_ei6vx"]
@@ -20,19 +20,39 @@ display_name = "Female"
 
 [sub_resource type="Resource" id="Resource_5ywsu"]
 script = ExtResource("1_3dj20")
+name = "CCC_rings"
+cc_id = "de027603"
+allow_multiple_selection = true
+
+[sub_resource type="Resource" id="Resource_7ckck"]
+script = ExtResource("1_3dj20")
+name = "CC_index_ring"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_rings_CC_id_de027603/CC_index_ring_CC_id_589944fa/CC_index_ring.glb"
+cc_id = "589944fa"
+display_name = "Fancy Index"
+
+[sub_resource type="Resource" id="Resource_c0f4k"]
+script = ExtResource("1_3dj20")
+name = "CC_thumb_ring"
+glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_female_CC_id_57be63e5/CCC_rings_CC_id_de027603/CC_thumb_ring_CC_id_d9e8635c/CC_thumb_ring.glb"
+cc_id = "d9e8635c"
+display_name = "Thumbo Ring"
+
+[sub_resource type="Resource" id="Resource_4ucjx"]
+script = ExtResource("1_3dj20")
 name = "CC_male"
 glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CC_male.glb"
 cc_id = "9efe906c"
 display_name = "Male"
 
-[sub_resource type="Resource" id="Resource_7ckck"]
+[sub_resource type="Resource" id="Resource_4mub0"]
 script = ExtResource("1_3dj20")
 name = "CCC_shirts"
 cc_id = "6327b5f1"
 display_name = "Awesome Shirts"
 default_child_id = "dcefb103"
 
-[sub_resource type="Resource" id="Resource_c0f4k"]
+[sub_resource type="Resource" id="Resource_a73bh"]
 script = ExtResource("1_3dj20")
 name = "CC_t_shirt"
 glb_path = "res://addons/character_creator/example_usages/character_config/CCC_genders_CC_id_66650050/CC_male_CC_id_9efe906c/CCC_shirts_CC_id_6327b5f1/CC_t_shirt_CC_id_dcefb103/CC_t_shirt.glb"
@@ -41,4 +61,4 @@ display_name = "T-Shirt"
 
 [resource]
 script = ExtResource("2_ei6vx")
-items = Array[ExtResource("1_3dj20")]([SubResource("Resource_jttvk"), SubResource("Resource_lcdau"), SubResource("Resource_5ywsu"), SubResource("Resource_7ckck"), SubResource("Resource_c0f4k")])
+items = Array[ExtResource("1_3dj20")]([SubResource("Resource_jttvk"), SubResource("Resource_lcdau"), SubResource("Resource_5ywsu"), SubResource("Resource_7ckck"), SubResource("Resource_c0f4k"), SubResource("Resource_4ucjx"), SubResource("Resource_4mub0"), SubResource("Resource_a73bh")])
