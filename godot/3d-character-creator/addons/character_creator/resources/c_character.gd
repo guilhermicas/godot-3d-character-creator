@@ -70,6 +70,7 @@ func _load_character() -> void:
 		return
 
 	# Validate: rebuild hierarchy from saved cc_ids, then flatten back
+	# TODO: maybe this could be cleaner? (validating instead of assembling and flattening again)
 	# This filters out orphaned components (e.g., shirt saved under female but now under male)
 	var saved_ids: Dictionary = {}
 	for comp in local_res.items:
@@ -101,10 +102,10 @@ func _save_to_disk() -> void:
 	var char_dir := _character_save_path.get_base_dir()
 	if not DirAccess.dir_exists_absolute(char_dir):
 		DirAccess.make_dir_recursive_absolute(char_dir)
-	
+
 	var local_res := LocalConfig.new()
 	local_res.items = _flat_config
-	
+
 	var result := ResourceSaver.save(local_res, _character_save_path)
 	if result == OK:
 		print("CCharacter: Saved character to " + _character_save_path)
@@ -117,25 +118,25 @@ func _rebuild_mesh() -> void:
 	for instance in _mesh_instances:
 		instance.queue_free()
 	_mesh_instances.clear()
-	
+
 	if _flat_config.is_empty() or _global_config == null:
 		meshes_rebuilt.emit()
 		return
-	
+
 	# Assemble hierarchy from flat array using global config authority
 	var assembled := CharacterComponent.assemble_from_global(_flat_config, _global_config)
-	
+
 	# Instantiate meshes with proper hierarchy
 	_instantiate_recursive(assembled, self)
-	
+
 	# Free unused GLBs from cache
 	_free_unused_glbs()
-	
+
 	meshes_rebuilt.emit()
 
 func _instantiate_recursive(component: CharacterComponent, parent: Node3D) -> void:
 	var current_node: Node3D = parent
-	
+
 	# If this component has a model, instantiate it
 	if component.glb_path != "":
 		var cached := GLBCache.get_cached(component.cc_id)
@@ -147,13 +148,13 @@ func _instantiate_recursive(component: CharacterComponent, parent: Node3D) -> vo
 			else:
 				push_error("CCharacter: Failed to load GLB: " + component.glb_path)
 				return
-		
+
 		if cached:
 			var instance := cached.instantiate() as Node3D
 			parent.add_child(instance)
 			_mesh_instances.append(instance)
 			current_node = instance
-	
+
 	# Recursively instantiate children
 	for child in component.children:
 		if child:  # Skip null children (defensive programming)
