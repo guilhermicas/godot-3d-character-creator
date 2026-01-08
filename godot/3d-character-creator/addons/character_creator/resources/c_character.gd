@@ -152,6 +152,8 @@ func _instantiate_recursive(component: CharacterComponent, parent: Node3D) -> vo
 		if cached:
 			var instance := cached.instantiate() as Node3D
 			parent.add_child(instance)
+			# Apply bone scale profile after instantiation (before adding to mesh list)
+			_apply_bone_scales(instance, component)
 			_mesh_instances.append(instance)
 			current_node = instance
 
@@ -163,3 +165,50 @@ func _instantiate_recursive(component: CharacterComponent, parent: Node3D) -> vo
 func _free_unused_glbs() -> void:
 	# Evict from cache using cached cc_ids set
 	GLBCache.evict_except(_used_cc_ids)
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	"""Recursively search for Skeleton3D in node tree."""
+	if node is Skeleton3D:
+		return node
+	for child in node.get_children():
+		var result := _find_skeleton(child)
+		if result:
+			return result
+	return null
+
+func _apply_bone_scales(instance: Node3D, component: CharacterComponent) -> void:
+	"""Apply bone scale profile to skeleton if present in component metadata."""
+	if not component.metadata.has("bone_scale_profile"):
+		return
+
+	var profile: Dictionary = component.metadata["bone_scale_profile"]
+	if profile.is_empty():
+		return
+
+	var skeleton := _find_skeleton(instance)
+	if not skeleton:
+		return
+
+	var applied_count := 0
+	for bone_name: String in profile:
+		var idx := skeleton.find_bone(bone_name)
+		if idx < 0:
+			push_warning("CCharacter: Bone '%s' not found in skeleton" % bone_name)
+			continue
+
+		var scale_data = profile[bone_name]
+		var scale_vec: Vector3
+
+		if scale_data is Array and scale_data.size() >= 3:
+			scale_vec = Vector3(scale_data[0], scale_data[1], scale_data[2])
+		elif scale_data is float or scale_data is int:
+			scale_vec = Vector3(scale_data, scale_data, scale_data)
+		else:
+			push_warning("CCharacter: Invalid scale format for bone '%s'" % bone_name)
+			continue
+
+		skeleton.set_bone_pose_scale(idx, scale_vec)
+		applied_count += 1
+
+	if applied_count > 0:
+		print("CCharacter: Applied %d bone scales to %s" % [applied_count, component.name])

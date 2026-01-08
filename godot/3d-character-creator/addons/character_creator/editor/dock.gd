@@ -168,6 +168,10 @@ func _scan_component(path: String) -> CharacterComponent:
 	while f != "":
 		if not dir.current_is_dir() and f.ends_with(".glb"):
 			comp.glb_path = path.path_join(f)
+			# Extract bone_scale_profile from GLB extras
+			var bone_profile := _extract_glb_bone_profile(comp.glb_path)
+			if not bone_profile.is_empty():
+				comp.metadata["bone_scale_profile"] = bone_profile
 			break
 		f = dir.get_next()
 	dir.list_dir_end()
@@ -191,6 +195,13 @@ func _merge_scanned_into_config(existing: CharacterComponent, scanned: Character
 	existing.glb_path = scanned.glb_path
 	existing.cc_id = scanned.cc_id
 
+	# Blender is authoritative for bone_scale_profile - always use scanned value
+	if scanned.metadata.has("bone_scale_profile"):
+		existing.metadata["bone_scale_profile"] = scanned.metadata["bone_scale_profile"]
+	elif existing.metadata.has("bone_scale_profile"):
+		# Remove stale profile if no longer in Blender export
+		existing.metadata.erase("bone_scale_profile")
+
 	# Build map of existing children by cc_id
 	var existing_map := {}
 	for child in existing.children:
@@ -211,6 +222,39 @@ func _merge_scanned_into_config(existing: CharacterComponent, scanned: Character
 			merged.append(scanned_child)
 
 	existing.children = merged
+
+func _extract_glb_bone_profile(glb_path: String) -> Dictionary:
+	"""Extract bone_scale_profile from GLB extras."""
+	if not FileAccess.file_exists(glb_path):
+		return {}
+
+	var scene: PackedScene = load(glb_path)
+	if not scene:
+		return {}
+
+	var instance := scene.instantiate()
+	if not instance:
+		return {}
+
+	var result := {}
+
+	# Blender exports custom properties as metadata on the root node
+	if instance.has_meta("bone_scale_profile"):
+		var meta = instance.get_meta("bone_scale_profile")
+		if meta is Dictionary:
+			result = meta
+
+	# Alternative: check as a node property (some GLB import versions)
+	if result.is_empty():
+		for prop in instance.get_property_list():
+			if prop.name == "bone_scale_profile":
+				var val = instance.get(prop.name)
+				if val is Dictionary:
+					result = val
+				break
+
+	instance.queue_free()
+	return result
 
 func _update_project_settings(_config_path: String) -> void:
 	# Only store blender_export_path in ProjectSettings
